@@ -151,19 +151,27 @@ class Sensor(object):
 		self.next_log = 0
 		self.log_interval = 1200
 		self.log_enabled = False
+		self.pin = 0
 		self.cursor = cursor
+		self.is_valid = True
 		print(self.db_id)
-		self.cursor.execute("SELECT log FROM sensors WHERE id = %s", [self.db_id])
+		self.cursor.execute("SELECT pin, log FROM sensors WHERE id = %s", [self.db_id])
 		if self.cursor.rowcount == 1:
-			self.log_enabled = self.cursor.fetchone()[0] == 1
+			row = self.cursor.fetchone()
+			self.pin = int(row[0])
+			self.log_enabled = row[1] == 1
 		else:
 			raise BaseException("No Sensor in database")
 
 		self.test_value = 0
+		
+	def arduino_msg(self, message):
+		pass
+		
 
 	def log(self):
 		if self.log_enabled:
-			if self.next_log < time.time():
+			if self.next_log < time.time() and self.is_valid:
 				print("Sensor {0} = {1}".format(self.db_id, self.read()))
 				self.cursor.execute("INSERT INTO sensor_data (sensor_id, value, time) VALUE (%s, %s, %s)", [self.db_id, self.read(), time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())])
 				self.next_log = time.time() + self.log_interval
@@ -176,23 +184,63 @@ class Clock(Sensor):
 
 	def read(self):
 		return time.time()
+		
+class ArduinoSensor(Sensor):
+	
+	def __init__(self, db_id, cursor):
+		Sensor.__init__(self, db_id, cursor)
+		self.is_valid = False
+		self.value = 0
+		
+	def read(self):
+		return self.value
+		
+class DHT_Humid(ArduinoSensor):
+	
+	def arduino_msg(self, message):
+		message = message.strip().split(',')
+		if int(message[0]) == self.pin:
+			if message[1] == "OK":
+				self.is_valid = True
+				self.value = float(message[2])
+			else:
+				self.is_valid = False
+				print("Sensor {0}: {1}".format(self.db_id, message[1]))
+	
+class DHT_Temp(ArduinoSensor):
+	
+	def arduino_msg(self, message):
+		message = message.strip().split(',')
+		if int(message[0]) == self.pin:
+			if message[1] == "OK":
+				self.is_valid = True
+				self.value = float(message[3])
+			else:
+				self.is_valid = False
+				print("Sensor {0}: {1}".format(self.db_id, message[1]))
+
+
 
 	
 if __name__ == "__main__":
-	connection = pymysql.connect(host="XXX", port=000, user='XXX', password="XXX", db="XXX")
+	connection = pymysql.connect(host="green.joshmcculloch.nz", port=4141, user='greenhouse', password="s5XLuszNYcGtZAC3", db="greenhouse")
 	cursor = connection.cursor()
-	coms = io.BytesIO(); 
-	#coms = serial.Serial("")
+	#coms = io.BytesIO(); 
+	coms = serial.Serial("/dev/ttyUSB0")
 	
 	print("Fetching sensor information... ",end="")
 	sensors = []
 	sensors.append(Clock(1, cursor))
-	sensors.append(Sensor(3, cursor))
-	sensors.append(Sensor(4, cursor))
-	sensors.append(Sensor(5, cursor))
-	sensors.append(Sensor(6, cursor))
-	sensors.append(Sensor(7, cursor))
-	sensors.append(Sensor(8, cursor))
+	sensors.append(DHT_Temp(3, cursor))
+	sensors.append(DHT_Humid(4, cursor))
+	sensors.append(DHT_Temp(5, cursor))
+	sensors.append(DHT_Humid(6, cursor))
+	sensors.append(DHT_Temp(7, cursor))
+	sensors.append(DHT_Humid(8, cursor))
+	sensors.append(DHT_Temp(9, cursor))
+	sensors.append(DHT_Humid(10, cursor))
+	sensors.append(Sensor(11, cursor))
+	sensors.append(Sensor(12, cursor))
 	connection.commit()
 	print("Done!\n")
 	
@@ -207,12 +255,18 @@ if __name__ == "__main__":
 	actuators.append(Actuator(7, cursor, coms, 7))
 	actuators.append(Actuator(8, cursor, coms, 6))
 	
+	
 	print("Actuators configured!\n")
 
 	print("Taking control of the greenhouse now!")
 	try:
 		count = 0
 		while True:
+			while (coms.inWaiting() > 0):
+				sensor_data = coms.readline().decode('utf-8')
+				for sensor in sensors:
+					sensor.arduino_msg(sensor_data)
+				
 			if count%10 == 0:
 				for sensor in sensors:
 					sensor.log()
