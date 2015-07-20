@@ -22,20 +22,26 @@ class User extends CI_Model
         $this->session->set_userdata($data);
     }
 
-    function login($username, $password) {
-        if ($username == "admin" && $password == "admin" || TRUE) {
-            $data = array(
-                'username'  => $username,
-                'loggedin' => TRUE,
-                'userlevel' => 1
-            );
+    function create_user($username, $password, $level) {
+        $query = $this->db->query('INSERT INTO users (username, password, level) VALUES (?, ?, ?)', array($username,sha1($password),$level));
+    }
 
-            $this->session->set_userdata($data);
-            return TRUE;
-        } else {
-            //$this->init();
-            return FALSE;
+    function login($username, $password) {
+        $query = $this->db->query('SELECT * FROM users WHERE username like ?', array($username));
+        if ($query->num_rows() == 1) {
+            $user =  $level = $query->row();
+            if (sha1($password) == $user->password) {
+                $data = array(
+                    'username'  => $username,
+                    'loggedin' => TRUE,
+                    'userlevel' => $user->level
+                );
+
+                $this->session->set_userdata($data);
+                return TRUE;
+            }
         }
+        return FALSE;
     }
 
     function logout() {
