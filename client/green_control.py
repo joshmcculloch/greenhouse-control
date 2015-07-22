@@ -7,6 +7,7 @@ import time
 from enum import Enum
 import serial
 import io
+import configparser
 
 class Mode(Enum):
 	unkown = -1
@@ -223,8 +224,16 @@ class DHT_Temp(ArduinoSensor):
 
 	
 if __name__ == "__main__":
-	connection = pymysql.connect(host="green.joshmcculloch.nz", port=4141, user='greenhouse', password="s5XLuszNYcGtZAC3", db="greenhouse")
+	config = configparser.ConfigParser()
+	config.read("greenhouse.ini")
+	
+	connection = pymysql.connect(host=config['SQL CREDS']['host'], 
+		port=int(config['SQL CREDS']['port']), 
+		user=config['SQL CREDS']['user'], 
+		password=config['SQL CREDS']['password'], 
+		db=config['SQL CREDS']['db'])
 	cursor = connection.cursor()
+	
 	#coms = io.BytesIO(); 
 	coms = serial.Serial("/dev/ttyUSB0")
 	
