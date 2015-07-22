@@ -8,6 +8,7 @@ from enum import Enum
 import serial
 import io
 import configparser
+from optparse import OptionParser
 
 class Mode(Enum):
 	unkown = -1
@@ -224,8 +225,14 @@ class DHT_Temp(ArduinoSensor):
 
 	
 if __name__ == "__main__":
+	parser = OptionParser()
+	parser.add_option("-c", "--config", dest="config",
+		help="configuration file",
+		default="greenhouse.ini")
+	options, args = parser.parse_args()
+
 	config = configparser.ConfigParser()
-	config.read("greenhouse.ini")
+	config.read(options.config)
 	
 	connection = pymysql.connect(host=config['SQL CREDS']['host'], 
 		port=int(config['SQL CREDS']['port']), 
