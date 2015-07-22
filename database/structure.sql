@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jul 15, 2015 at 02:43 PM
+-- Generation Time: Jul 21, 2015 at 09:27 AM
 -- Server version: 5.5.43
 -- PHP Version: 5.3.10-1ubuntu3.18
 
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS `graph_sensors` (
   `graph_id` int(11) NOT NULL,
   `sensor_id` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=11 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=12 ;
 
 -- --------------------------------------------------------
 
@@ -127,6 +127,7 @@ CREATE TABLE IF NOT EXISTS `schedule` (
 CREATE TABLE IF NOT EXISTS `sensors` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(256) NOT NULL,
+  `pin` int(11) NOT NULL,
   `log` int(11) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=13 ;
@@ -143,7 +144,7 @@ CREATE TABLE IF NOT EXISTS `sensor_data` (
   `value` float NOT NULL,
   `time` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=14545 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1289 ;
 
 -- --------------------------------------------------------
 
@@ -157,7 +158,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `password` varchar(64) NOT NULL,
   `level` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=9 ;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
