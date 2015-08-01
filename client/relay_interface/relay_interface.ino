@@ -5,9 +5,22 @@
 #define SENSOR_C_PIN 4
 #define SENSOR_D_PIN 5
 
+#define MOISTURE_PIN A0
+
 dht DHT;
 int interval = 5000;
 unsigned long previous_millis = 0;
+
+void report_moisture(int pin)
+{
+  int sensorValue = analogRead(pin);
+  Serial.print(pin);
+  Serial.print(',');
+  Serial.print("OK");
+  Serial.print(',');
+  Serial.print(sensorValue);
+  Serial.print("\n");
+}
 
 void report_dht(int pin)
 {
@@ -95,5 +108,6 @@ void loop()
     report_dht(SENSOR_B_PIN);
     report_dht(SENSOR_C_PIN);
     report_dht(SENSOR_D_PIN);
+    report_moisture(MOISTURE_PIN);
   }
 }

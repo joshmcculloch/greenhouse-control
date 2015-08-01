@@ -221,7 +221,17 @@ class DHT_Temp(ArduinoSensor):
 				self.is_valid = False
 				print("Sensor {0}: {1}".format(self.db_id, message[1]))
 
+class Moisture_Probe(ArduinoSensor):
 
+	def arduino_msg(self, message):
+		message = message.strip().split(',')
+		if int(message[0]) == self.pin:
+			if message[1] == "OK":
+				self.is_valid = True
+				self.value = float(message[2])
+			else:
+				self.is_valid = False
+				print("Sensor {0}: {1}".format(self.db_id, message[1]))
 
 	
 if __name__ == "__main__":
@@ -256,7 +266,7 @@ if __name__ == "__main__":
 	sensors.append(DHT_Temp(9, cursor))
 	sensors.append(DHT_Humid(10, cursor))
 	sensors.append(Sensor(11, cursor))
-	sensors.append(Sensor(12, cursor))
+	sensors.append(Moisture_Probe(12, cursor))
 	connection.commit()
 	print("Done!\n")
 	
