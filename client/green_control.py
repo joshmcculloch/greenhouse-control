@@ -306,7 +306,6 @@ if __name__ == "__main__":
 	actuators.append(Actuator(7, cursor, coms, 7,  db_lock))
 	actuators.append(Actuator(8, cursor, coms, 6,  db_lock))
 	
-	help(cursor)
 	print("Actuators configured!\n")
 
 	print("Taking control of the greenhouse now!")
