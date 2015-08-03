@@ -38,6 +38,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     label: '<?php echo $graph['yaxis_title'];?>',
                     labelRenderer: $.jqplot.CanvasAxisLabelRenderer
                 }
+            },
+            highlighter: {
+                show: true
             }
         });
         <?php
