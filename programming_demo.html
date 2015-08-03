@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+    <canvas id="click_area" width="1000" height="700"></canvas>
+</body>
+<script>
+
+    function Node(posx, posy, name) {
+        this.posx = posx;
+        this.posy = posy;
+        this.width = 100;
+        this.height = 40;
+        this.text = name;
+        this.state = "14.5c";
+        this.active = false;
+    }
+
+    Node.prototype.draw = function (context) {
+        context.beginPath();
+        context.lineWidth="2";
+        context.rect(this.posx, this.posy, this.width, this.height);
+        if (this.active) {
+            context.fillStyle="rgb(100,149,237)";
+            context.fill();
+        } else {
+            context.fillStyle="rgb(150,150,150)";
+            context.fill();
+        }
+        context.stroke();
+        context.fillStyle="black";
+        context.font = "10px serif";
+        context.fillText(this.text, this.posx + 5, this.posy + 15);
+        context.fillText(this.state, this.posx + 5, this.posy + 30);
+
+    };
+
+    Node.prototype.in_location = function () {
+        return {x: this.posx, y: this.posy + this.height/2};
+    };
+
+    Node.prototype.out_location = function () {
+        return {x: this.posx + this.width, y: this.posy + this.height/2};
+    };
+
+    Node.prototype.clicked = function (x,y) {
+        console.log(x,y);
+        if ( this.posx <= x && x < (this.posx+this.width) &&
+                this.posy <= y && y < (this.posy+this.height)) {
+            return true;
+        }
+        return false;
+    };
+
+    function Link(node_out, node_in) {
+        this.node_out = node_out;
+        this.node_in = node_in;
+    }
+
+    Link.prototype.draw = function (context) {
+        var out_location = this.node_out.out_location();
+        var in_location = this.node_in.in_location();
+        context.beginPath();
+        context.moveTo(out_location.x, out_location.y);
+        context.bezierCurveTo(out_location.x + 50, out_location.y,
+                in_location.x-50, in_location.y,
+                in_location.x, in_location.y);
+        context.lineWidth = 2;
+        context.strokeStyle = 'red';
+        context.stroke();
+    };
+
+
+    var canvas = document.getElementById("click_area");
+    var context = canvas.getContext("2d");
+    var nodes = [];
+    var links = [];
+    var selectedNode = undefined;
+    var activeNode = undefined;
+    var dragging = false;
+    var scrolling = false;
+    var lastmousex = 0;
+    var lastmousey = 0;
+    var camerax = 0;
+    var cameray = 0;
+
+    canvas.addEventListener('mousedown', function (event) {
+        var x = event.clientX - event.target.offsetLeft;
+        var y = event.clientY - event.target.offsetTop;
+        lastmousex = x;
+        lastmousey = y;
+
+
+        for(var i=0; i<nodes.length; i++) {
+            if (nodes[i].clicked(x + camerax,y + cameray)) {
+                selectedNode = nodes[i];
+                break;
+            }
+        }
+        if (typeof(selectedNode) === "undefined") {
+            // We didn't find a node so the user must be scrolling
+            scrolling = true;
+            console.log("scrolling");
+        }
+        draw();
+    });
+
+    canvas.addEventListener('mousemove', function (event) {
+
+        var x = event.clientX - event.target.offsetLeft;
+        var y = event.clientY - event.target.offsetTop;
+        var diffx = x - lastmousex;
+        var diffy = y - lastmousey;
+
+
+        lastmousex = x;
+        lastmousey = y;
+
+        if (selectedNode) {
+            console.log("dragging");
+            dragging = true;
+            selectedNode.posx += diffx;
+            selectedNode.posy += diffy;
+        } else if (scrolling) {
+            camerax -= diffx;
+            cameray -= diffy;
+        }
+
+        draw();
+    });
+
+    canvas.addEventListener('mouseup', function (event) {
+        var x = event.clientX - event.target.offsetLeft;
+        var y = event.clientY - event.target.offsetTop;
+
+        if (typeof(selectedNode) !== "undefined") {
+            if (typeof(activeNode) !== "undefined" && activeNode != selectedNode && !dragging) {
+                links.push(new Link(activeNode, selectedNode));
+                activeNode.active = false;
+                activeNode = undefined;
+                selectedNode = undefined;
+
+            } else if (!selectedNode.active && !dragging) {
+                console.log("activating node");
+                selectedNode.active = true;
+                activeNode = selectedNode;
+                selectedNode = undefined;
+
+            } else if (selectedNode.active && !dragging) {
+                console.log("unactivating node");
+                selectedNode.active = false;
+                activeNode = undefined;
+                selectedNode = undefined;
+
+            } else if (dragging) {
+                console.log("dragging complete");
+                dragging = false;
+                selectedNode = undefined;
+            }
+
+        }
+        else if (scrolling) {
+            console.log("scrolling complete");
+            scrolling = false;
+        }
+        draw();
+    });
+
+    nodes.push(new Node(30,30,"Outside Temp"));
+
+    nodes.push(new Node(30,80,"Upper Temp"));
+
+    nodes.push(new Node(30,130,"Lower Temp"));
+
+    nodes.push(new Node(30,180,"Secondary Temp"));
+
+    nodes.push(new Node(30,230,"Outside Humid"));
+
+    nodes.push(new Node(30,280,"Upper Humid"));
+
+    nodes.push(new Node(30,330,"Lower Humid"));
+
+    nodes.push(new Node(30,380,"Secondary Humid"));
+
+    nodes.push(new Node(30,430,"Program On"));
+
+    nodes.push(new Node(200,180,"IF > 12"));
+
+    nodes.push(new Node(200,230,"IF < 23"));
+
+    nodes.push(new Node(370,205,"AND"));
+
+    nodes.push(new Node(530, 205,"Actuator On"));
+
+
+    links.push(new Link(nodes[0], nodes[9]));
+
+    links.push(new Link(nodes[1], nodes[10]));
+
+    links.push(new Link(nodes[9], nodes[11]));
+
+    links.push(new Link(nodes[10], nodes[11]));
+
+    links.push(new Link(nodes[11], nodes[12]));
+
+    links.push(new Link(nodes[8], nodes[11]));
+
+    function draw () {
+        context.clearRect(0,0,canvas.width,canvas.height);
+        context.beginPath();
+        context.rect(0,0,canvas.width,canvas.height);
+        context.fillStyle = "rgb(75,75,75)"
+        context.fill();
+
+        context.save();
+        context.translate(-camerax, -cameray);
+        for(var i=0; i<nodes.length; i++) {
+            nodes[i].draw(context);
+        }
+        for(var i=0; i<links.length; i++) {
+            links[i].draw(context);
+        }
+        context.restore();
+    }
+
+    draw();
+
+</script>
+</html>
