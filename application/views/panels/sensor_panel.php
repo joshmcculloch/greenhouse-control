@@ -21,6 +21,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             title: '<?php echo $graph['title'];?>',
             animate: true,
             legend: {
+                location: 'n',
                 show: true
             },
             series: [
