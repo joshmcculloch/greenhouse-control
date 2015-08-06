@@ -16,13 +16,16 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             </div>
             <div class="panel-body">
                 <div class="row">
-                    <div class="col-xs-12 col-sm-6 text-center">
-                        <img style="max-width: 100%;" src="/images/image_1.jpg"/>
-                    </div>
-                    <div class="col-xs-12 col-sm-6 text-center">
-                        <img style="max-width: 100%;" src="/images/image_2.jpg"/>
+                    <div class="col-xs-12 text-center">
+                        <img id="camera1" style="max-width: 100%;" src="/images/camera_1.jpg"/>
                     </div>
                 </div>
+                <script>
+                    setInterval(function() {
+                        var myImageElement = document.getElementById('camera1');
+                        myImageElement.src = '/images/camera_1.jpg?rand=' + Math.random();
+                    }, 30000);
+                </script>
             </div>
         </div>
     </div>

@@ -11,7 +11,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="panel-heading">
                 <h3 class="panel-title">Rule Management</h3>
             </div>
-            <div class="panel-body">
+            <div class="panel-body" style="padding:0">
                 <canvas id="click_area" width="700" height="400"></canvas>
                 <script>
 
@@ -223,10 +223,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                     function draw () {
                         rule_ns.context.clearRect(0,0,rule_ns.canvas.width,rule_ns.canvas.height);
-                        rule_ns.context.beginPath();
-                        rule_ns.context.rect(0,0,rule_ns.canvas.width,rule_ns.canvas.height);
-                        rule_ns.context.fillStyle = "rgb(75,75,75)"
-                        rule_ns.context.fill();
+                        //rule_ns.context.beginPath();
+                        //rule_ns.context.rect(0,0,rule_ns.canvas.width,rule_ns.canvas.height);
+                        //rule_ns.context.fillStyle = "rgb(75,75,75)"
+                        //rule_ns.context.fill();
 
                         rule_ns.context.save();
                         rule_ns.context.translate(-rule_ns.camerax, -rule_ns.cameray);

@@ -8,11 +8,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <link href="/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/jquery.jqplot.min.css" rel="stylesheet">
     <script src="/js/jquery-1.11.3.min.js"></script>
-    <script src="/js/bootstrap.js"></script>
-    <script src="/js/jqplot/jquery.jqplot.min.js"></script>
-    <script src="/js/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
-    <script src="/js/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
-    <script src="/js/jqplot/plugins/jqplot.dateAxisRenderer.min.js"></script>
     <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
     <style>
         .progress-no-margin {
@@ -43,7 +38,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <a class="navbar-brand" href="/">Greenhouse Control</a>
         </div>
 
-        <div class="navbar-collapse collapse">
+        <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
                 <li class="active"><a href=""><?php echo $heading; ?></a></li>
             </ul>
