@@ -3,10 +3,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 ?>
 <style>
     canvas{
-        cursor: pointer;
+        <?php echo $edit_schedule ? 'cursor: pointer;' : ' cursor:not-allowed;'?>
     }
     canvas:active{
-        cursor: pointer;
+        <?php echo $edit_schedule ? 'cursor: pointer;' : ' cursor:not-allowed;'?>
     }
 </style>
 <div class="row">
@@ -56,6 +56,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     var schedule = [];
                     var schedule_loaded = false;
                     var paint_state = 0
+                    var can_edit = <?php echo $edit_schedule ? 'true' : 'false';?>;
 
                     var slider_active_time = 0;
                     var slider_delay_time = 0;
@@ -198,52 +199,54 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             };
                         }
 
-                        document.addEventListener('mousedown', function(evt) {
-                            mouse_down = true;
-                        });
+                        if (can_edit) {
+                            document.addEventListener('mousedown', function (evt) {
+                                mouse_down = true;
+                            });
 
-                        document.addEventListener('mouseup', function(evt) {
-                            mouse_down = false;
-                            load_schedule();
-                        });
+                            document.addEventListener('mouseup', function (evt) {
+                                mouse_down = false;
+                                load_schedule();
+                            });
 
-                        canvas.addEventListener('mousemove', function(evt) {
-                            if (schedule_loaded) {
-                                var mousePos = getMousePos(canvas, evt);
-                                var day = Math.floor(mousePos.x / 50);
-                                var day_name = days[day];
-                                var half_hour = Math.floor(mousePos.y / 10);
-                                var half_hour_name = Math.floor(half_hour / 2) + ":" + (half_hour % 2 ? "30" : "00");
-                                if (mouse_down) {
-                                    switch (paint_state) {
-                                        case 0:
-                                            update_schedule(day, half_hour, 1, 0);
-                                            break;
-                                        case 1:
-                                            update_schedule(day, half_hour, slider_active_time, slider_delay_time);
-                                            break;
-                                        case 2:
-                                            update_schedule(day, half_hour, 0, 1);
-                                            break
+                            canvas.addEventListener('mousemove', function (evt) {
+                                if (schedule_loaded) {
+                                    var mousePos = getMousePos(canvas, evt);
+                                    var day = Math.floor(mousePos.x / 50);
+                                    var day_name = days[day];
+                                    var half_hour = Math.floor(mousePos.y / 10);
+                                    var half_hour_name = Math.floor(half_hour / 2) + ":" + (half_hour % 2 ? "30" : "00");
+                                    if (mouse_down) {
+                                        switch (paint_state) {
+                                            case 0:
+                                                update_schedule(day, half_hour, 1, 0);
+                                                break;
+                                            case 1:
+                                                update_schedule(day, half_hour, slider_active_time, slider_delay_time);
+                                                break;
+                                            case 2:
+                                                update_schedule(day, half_hour, 0, 1);
+                                                break
+                                        }
                                     }
+                                    $("#slot").html(day_name + " " + half_hour_name);
+                                    if (schedule[day * 48 + half_hour].active_time == 0) {
+                                        $("#state").html("<strong><span style=\"color: #d9534f\">Off</span></strong>");
+                                    } else if (schedule[day * 48 + half_hour].delay_time == 0) {
+                                        $("#state").html("<strong><span style=\"color: #5cb85c\">On</span></strong>");
+                                    } else {
+
+                                        var active = schedule[day * 48 + half_hour].active_time;
+                                        var delay = schedule[day * 48 + half_hour].delay_time;
+                                        active = active < 60 ? active + " Sec" : (active / 60) + " Min"
+                                        delay = delay < 60 ? delay + " Sec" : (delay / 60) + " Min"
+                                        $("#state").html("<strong><span style=\"color: #5cb85c\">" + active + "</span> / <span style=\"color: #d9534f\">" + delay + "</span></strong>")
+                                    }
+
+
                                 }
-                                $("#slot").html(day_name + " " + half_hour_name);
-                                if (schedule[day * 48 + half_hour].active_time == 0) {
-                                    $("#state").html("<strong><span style=\"color: #d9534f\">Off</span></strong>");
-                                } else if (schedule[day * 48 + half_hour].delay_time == 0){
-                                    $("#state").html("<strong><span style=\"color: #5cb85c\">On</span></strong>");
-                                } else {
-
-                                    var active = schedule[day * 48 + half_hour].active_time;
-                                    var delay = schedule[day * 48 + half_hour].delay_time;
-                                    active = active < 60 ? active + " Sec" : (active / 60) + " Min"
-                                    delay = delay < 60 ? delay + " Sec" : (delay / 60) + " Min"
-                                    $("#state").html("<strong><span style=\"color: #5cb85c\">" + active + "</span> / <span style=\"color: #d9534f\">" + delay + "</span></strong>")
-                                }
-
-
-                            }
-                        }, false);
+                            }, false);
+                        }
 
 
 

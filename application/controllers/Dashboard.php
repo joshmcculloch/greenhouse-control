@@ -49,6 +49,7 @@ class Dashboard extends CI_Controller {
                 $this->load->view('panels/general_config_panel', $data);
             }
             if ($this->User->get_level("config/schedule/view")) {
+                $data["edit_schedule"] = $this->User->get_level("config/schedule/edit");
                 $this->load->view('panels/schedule_panel', $data);
             }
             if ($this->User->get_level("config/rules/view")) {
@@ -89,25 +90,27 @@ class Dashboard extends CI_Controller {
 
     public function set_schedule()
     {
-        $this->load->model('Schedule');
-        $this->load->helper('url');
-        $this->load->library('form_validation');
+        if ($this->User->get_level("config/schedule/edit")) {
+            $this->load->model('Schedule');
+            $this->load->helper('url');
+            $this->load->library('form_validation');
 
-        $this->form_validation->set_rules('actuator_id', 'actuator_id', 'required');
-        $this->form_validation->set_rules('day', 'day', 'required');
-        $this->form_validation->set_rules('half_hour', 'half_hour', 'required');
-        $this->form_validation->set_rules('active_time', 'active_time', 'required');
-        $this->form_validation->set_rules('delay_time', 'delay_time', 'required');
+            $this->form_validation->set_rules('actuator_id', 'actuator_id', 'required');
+            $this->form_validation->set_rules('day', 'day', 'required');
+            $this->form_validation->set_rules('half_hour', 'half_hour', 'required');
+            $this->form_validation->set_rules('active_time', 'active_time', 'required');
+            $this->form_validation->set_rules('delay_time', 'delay_time', 'required');
 
-        if ($this->form_validation->run() == false) {
-            //echo "VALIDATION FAILED";
-        } else {
-            $this->Schedule->set_schedule($this->input->post('actuator_id'),
-                $this->input->post('day'),
-                $this->input->post('half_hour'),
-                $this->input->post('active_time'),
-                $this->input->post('delay_time'));
-            //echo "SUCCESS";
+            if ($this->form_validation->run() == false) {
+                //echo "VALIDATION FAILED";
+            } else {
+                $this->Schedule->set_schedule($this->input->post('actuator_id'),
+                    $this->input->post('day'),
+                    $this->input->post('half_hour'),
+                    $this->input->post('active_time'),
+                    $this->input->post('delay_time'));
+                //echo "SUCCESS";
+            }
         }
     }
 
