@@ -38,6 +38,7 @@ class Dashboard extends CI_Controller {
         if ($this->User->get_level("config/view")) {
             $this->load->model('Actuator');
             $this->load->model('Schedule');
+            $this->load->model('Rules');
             $this->load->helper('url');
             $actuator = $this->Actuator->get_actuator($actuator_id);
 
@@ -53,6 +54,9 @@ class Dashboard extends CI_Controller {
                 $this->load->view('panels/schedule_panel', $data);
             }
             if ($this->User->get_level("config/rules/view")) {
+                $data['nodes'] = $this->Rules->getNodes($actuator_id);
+                $data['nodetypes'] = $this->Rules->getNodeTypes();
+                $data['links'] = $this->Rules->getLinks($actuator_id);
                 $this->load->view('panels/rule_panel', $data);
             }
             if ($this->User->get_level("config/tests/view")) {

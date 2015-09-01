@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jul 21, 2015 at 09:27 AM
+-- Generation Time: Sep 01, 2015 at 07:30 PM
 -- Server version: 5.5.43
 -- PHP Version: 5.3.10-1ubuntu3.18
 
@@ -86,7 +86,52 @@ CREATE TABLE IF NOT EXISTS `graph_sensors` (
   `graph_id` int(11) NOT NULL,
   `sensor_id` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=12 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=11 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `nodelinks`
+--
+
+CREATE TABLE IF NOT EXISTS `nodelinks` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `actuator_id` int(11) NOT NULL,
+  `node_in` int(11) NOT NULL,
+  `node_out` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `nodes`
+--
+
+CREATE TABLE IF NOT EXISTS `nodes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `actuator_id` int(11) NOT NULL,
+  `type_id` int(11) NOT NULL,
+  `sensor_id` int(11) DEFAULT NULL,
+  `value` int(11) DEFAULT NULL,
+  `xpos` int(11) NOT NULL,
+  `ypos` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=21 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `nodetype`
+--
+
+CREATE TABLE IF NOT EXISTS `nodetype` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(64) NOT NULL,
+  `intype` varchar(64) NOT NULL,
+  `outtype` varchar(64) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=8 ;
 
 -- --------------------------------------------------------
 
@@ -144,7 +189,7 @@ CREATE TABLE IF NOT EXISTS `sensor_data` (
   `value` float NOT NULL,
   `time` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1289 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=14673 ;
 
 -- --------------------------------------------------------
 
@@ -158,7 +203,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `password` varchar(64) NOT NULL,
   `level` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=9 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

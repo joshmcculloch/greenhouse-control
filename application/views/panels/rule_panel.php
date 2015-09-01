@@ -14,6 +14,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="panel-body" style="padding:0">
                 <canvas id="click_area" width="700" height="400"></canvas>
                 <script>
+                    var db_nodes = <?php echo json_encode($nodes); ?>;
+                    var db_nodetypes = <?php echo json_encode($nodetypes); ?>;
+                    var db_links = <?php echo json_encode($links); ?>;
 
                     function Node(posx, posy, name) {
                         this.posx = posx;
@@ -182,6 +185,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         draw();
                     });
 
+                    /*
                     rule_ns.nodes.push(new Node(30,30,"Outside Temp"));
 
                     rule_ns.nodes.push(new Node(30,80,"Upper Temp"));
@@ -220,6 +224,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     rule_ns.links.push(new Link(rule_ns.nodes[11], rule_ns.nodes[12]));
 
                     rule_ns.links.push(new Link(rule_ns.nodes[8], rule_ns.nodes[11]));
+*/
+
+                    for(var i=0; i<db_nodes.length; i++) {
+                        rule_ns.nodes.push(new Node(Number(db_nodes[i].xpos),Number(db_nodes[i].ypos),"Database Node"));
+                    }
 
                     function draw () {
                         rule_ns.context.clearRect(0,0,rule_ns.canvas.width,rule_ns.canvas.height);
