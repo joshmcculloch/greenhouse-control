@@ -18,14 +18,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     var db_nodetypes = <?php echo json_encode($nodetypes); ?>;
                     var db_links = <?php echo json_encode($links); ?>;
 
-                    function Node(posx, posy, name) {
+                    var type_colours = {"bool": "rgb(255,0,0)", "float": "rgb(0,255,0)"};
+
+                    function Node(posx, posy, name, value, type) {
                         this.posx = posx;
                         this.posy = posy;
                         this.width = 100;
                         this.height = 40;
+                        this.type = type;
                         this.text = name;
-                        this.state = "14.5c";
+                        this.value = value;
                         this.active = false;
+                        this.inputs = 0
                     }
 
                     Node.prototype.draw = function (context) {
@@ -40,10 +44,35 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             context.fill();
                         }
                         context.stroke();
+
+                        //Inputs
+                        if (this.type.intype != "none") {
+                            for (var i = 0; i < this.type.input_count; i++) {
+                                context.beginPath();
+                                context.arc(this.posx, this.posy + (this.height / this.type.input_count) * (i + 0.5), 5, 0, 2 * Math.PI, false);
+                                context.fillStyle = type_colours[this.type.intype];
+                                context.fill();
+                                context.lineWidth = 2;
+                                context.strokeStyle = 'black';
+                                context.stroke();
+                            }
+                        }
+
+                        //Output
+                        if (this.type.outtype != "none") {
+                            context.beginPath();
+                            context.arc(this.posx + this.width, this.posy + this.height / 2, 5, 0, 2 * Math.PI, false);
+                            context.fillStyle = type_colours[this.type.outtype];
+                            context.fill();
+                            context.lineWidth = 2;
+                            context.strokeStyle = 'black';
+                            context.stroke();
+                        }
+
                         context.fillStyle="black";
                         context.font = "10px serif";
-                        context.fillText(this.text, this.posx + 5, this.posy + 15);
-                        context.fillText(this.state, this.posx + 5, this.posy + 30);
+                        context.fillText(this.type.name, this.posx + 5, this.posy + 15);
+                        context.fillText(this.value, this.posx + 5, this.posy + 30);
 
                     };
 
@@ -67,6 +96,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     function Link(node_out, node_in) {
                         this.node_out = node_out;
                         this.node_in = node_in;
+                        this.node_in.inputs += 1;
+                    }
+
+                    Link.prototype.unlink = function () {
+                        this.node_in.inputs -= 1;
                     }
 
                     Link.prototype.draw = function (context) {
@@ -78,7 +112,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             in_location.x-50, in_location.y,
                             in_location.x, in_location.y);
                         context.lineWidth = 2;
-                        context.strokeStyle = 'red';
+                        context.strokeStyle = type_colours[this.node_out.type.outtype];
                         context.stroke();
                     };
 
@@ -106,7 +140,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         rule_ns.lastmousex = x;
                         rule_ns.lastmousey = y;
 
-
+                        // Find node that was clicked
                         for(var i=0; i<rule_ns.nodes.length; i++) {
                             if (rule_ns.nodes[i].clicked(x + rule_ns.camerax,y + rule_ns.cameray)) {
                                 rule_ns.selectedNode = rule_ns.nodes[i];
@@ -152,7 +186,32 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             if (typeof(rule_ns.activeNode) !== "undefined" &&
                                 rule_ns.activeNode != rule_ns.selectedNode &&
                                 !rule_ns.dragging) {
-                                rule_ns.links.push(new Link(rule_ns.activeNode, rule_ns.selectedNode));
+                                var deleted = false;
+                                //Check if this link already exists
+                                for(var i=0; i<rule_ns.links.length; i++) {
+                                    if (rule_ns.links[i].node_out == rule_ns.activeNode &&
+                                        rule_ns.links[i].node_in == rule_ns.selectedNode) {
+                                        //remove the item from links
+                                        rule_ns.links[i].unlink();
+                                        rule_ns.links.splice(i, 1);
+                                        deleted = true;
+                                    }
+                                }
+                                //Check the link is between two connectible nodes
+                                console.log(!deleted,
+                                rule_ns.activeNode.type.outtype != "none",
+                                rule_ns.activeNode.type.intype != "none",
+                                rule_ns.activeNode.type.outtype == rule_ns.selectedNode.type.intype,
+                                rule_ns.selectedNode.inputs < rule_ns.selectedNode.type.input_count);
+
+                                if (!deleted &&
+                                    rule_ns.activeNode.type.outtype != "none" &&
+                                    rule_ns.selectedNode.type.intype != "none" &&
+                                    rule_ns.activeNode.type.outtype == rule_ns.selectedNode.type.intype &&
+                                    rule_ns.selectedNode.inputs < rule_ns.selectedNode.type.input_count) {
+                                        //Create a link
+                                        rule_ns.links.push(new Link(rule_ns.activeNode, rule_ns.selectedNode));
+                                }
                                 rule_ns.activeNode.active = false;
                                 rule_ns.activeNode = undefined;
                                 rule_ns.selectedNode = undefined;
@@ -185,49 +244,15 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         draw();
                     });
 
-                    /*
-                    rule_ns.nodes.push(new Node(30,30,"Outside Temp"));
-
-                    rule_ns.nodes.push(new Node(30,80,"Upper Temp"));
-
-                    rule_ns.nodes.push(new Node(30,130,"Lower Temp"));
-
-                    rule_ns.nodes.push(new Node(30,180,"Secondary Temp"));
-
-                    rule_ns.nodes.push(new Node(30,230,"Outside Humid"));
-
-                    rule_ns.nodes.push(new Node(30,280,"Upper Humid"));
-
-                    rule_ns.nodes.push(new Node(30,330,"Lower Humid"));
-
-                    rule_ns.nodes.push(new Node(30,380,"Secondary Humid"));
-
-                    rule_ns.nodes.push(new Node(30,430,"Program On"));
-
-                    rule_ns.nodes.push(new Node(200,180,"IF > 12"));
-
-                    rule_ns.nodes.push(new Node(200,230,"IF < 23"));
-
-                    rule_ns.nodes.push(new Node(370,205,"AND"));
-
-                    rule_ns.nodes.push(new Node(530, 205,"Actuator On"));
-
-
-                    rule_ns.links.push(new Link(rule_ns.nodes[0], rule_ns.nodes[9]));
-
-                    rule_ns.links.push(new Link(rule_ns.nodes[1], rule_ns.nodes[10]));
-
-                    rule_ns.links.push(new Link(rule_ns.nodes[9], rule_ns.nodes[11]));
-
-                    rule_ns.links.push(new Link(rule_ns.nodes[10], rule_ns.nodes[11]));
-
-                    rule_ns.links.push(new Link(rule_ns.nodes[11], rule_ns.nodes[12]));
-
-                    rule_ns.links.push(new Link(rule_ns.nodes[8], rule_ns.nodes[11]));
-*/
 
                     for(var i=0; i<db_nodes.length; i++) {
-                        rule_ns.nodes.push(new Node(Number(db_nodes[i].xpos),Number(db_nodes[i].ypos),"Database Node"));
+                        var node_type = undefined;
+                        for(var j=0; j<db_nodetypes.length; j++) {
+                            if (db_nodetypes[j].id == db_nodes[i].type_id) {
+                                node_type = db_nodetypes[j];
+                            }
+                        }
+                        rule_ns.nodes.push(new Node(Number(db_nodes[i].xpos),Number(db_nodes[i].ypos),"Database Node", Number(db_nodes[i].value), node_type));
                     }
 
                     function draw () {
