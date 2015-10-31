@@ -12,7 +12,33 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 <h3 class="panel-title">Rule Management</h3>
             </div>
             <div class="panel-body" style="padding:0">
-                <canvas id="click_area" width="700" height="400"></canvas>
+                <div id="canvas_div" class="col-xs-12 col-m-8" onresize="resize_canvas()" style="padding:0;">
+                    <canvas id="click_area" width="700" height="400"></canvas>
+                </div>
+                <div class="col-xs-12 col-m-4">
+                    <div class="input-group">
+                        <div class="input-group-btn">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    Create Node <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                    <li><a href="#">Less Than</a></li>
+                                    <li><a href="#">Greater Than</a></li>
+                                    <li><a href="#">And</a></li>
+                                    <li><a href="#">Or</a></li>
+                                    <li><a href="#">Not</a></li>
+                                </ul>
+                            </div>
+                            <button type="button" class="btn btn-info">Update Value</button>
+                        </div>
+                        <input type="text" class="form-control">
+                        <div class="input-group-btn">
+                            <button type="button" class="btn btn-danger">Delete Node</button>
+                        </div>
+                    </div>
+                </div>
+
                 <script>
                     var db_nodes = <?php echo json_encode($nodes); ?>;
                     var db_nodetypes = <?php echo json_encode($nodetypes); ?>;
@@ -71,7 +97,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                         context.fillStyle="black";
                         context.font = "10px serif";
-                        context.fillText(this.type.name, this.posx + 5, this.posy + 15);
+                        context.fillText(this.text, this.posx + 5, this.posy + 15);
                         context.fillText(this.value, this.posx + 5, this.posy + 30);
 
                     };
@@ -129,6 +155,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         lastmousey: 0,
                         camerax: 0,
                         cameray: 0
+                    }
+
+                    function resize_canvas(){
+                        rule_ns.canvas.width = $("#canvas_div").innerWidth();
+                        draw();
                     }
 
                     rule_ns.context = rule_ns.canvas.getContext("2d");
@@ -252,7 +283,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 node_type = db_nodetypes[j];
                             }
                         }
-                        rule_ns.nodes.push(new Node(Number(db_nodes[i].xpos),Number(db_nodes[i].ypos),"Database Node", Number(db_nodes[i].value), node_type));
+                        var name = "Unkown name!";
+                        if (Number(db_nodes[i].type_id) == 1 &&
+                            Number(db_nodes[i].sensor_id) > 0) {
+                            name = db_nodes[i].sensor_name;
+                        } else if (Number(db_nodes[i].type_id) == 7 &&
+                            Number(db_nodes[i].actuator_id) > 0) {
+                            name = db_nodes[i].actuator_name;
+                        } else {
+                            name = node_type.name;
+                        }
+                        rule_ns.nodes.push(new Node(Number(db_nodes[i].xpos),Number(db_nodes[i].ypos), name, Number(db_nodes[i].value), node_type));
                     }
 
                     function draw () {
@@ -273,6 +314,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         rule_ns.context.restore();
                     }
 
+                    resize_canvas();
                     draw();
 
                 </script>
