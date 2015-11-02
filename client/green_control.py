@@ -310,6 +310,8 @@ if __name__ == "__main__":
 				actuator.update_relay()
 	
 	print("Taking control of the greenhouse now!")
+	threading.Thread(target=actuator_monitor).start()
+	
 	try:
 		while True:
 			
