@@ -263,10 +263,15 @@ if __name__ == "__main__":
 	config = configparser.ConfigParser()
 	config.read(options.config)
 	
+	VERBOSE_LEVEL = int(config['Debug']['verbosity'])
+	
+	if int(config['Debug']['simulate_serial']) == 1:
+		print("Using simulated serial port")
+		coms = io.BytesIO()
+	else:
+		coms = serial.Serial(config['Arduino']['serial'])
+	
 	database = Database(options.config);
-		
-	coms = io.BytesIO(); 
-	#coms = serial.Serial("/dev/ttyUSB0")
 	
 	print("Fetching sensor information... ",)
 	sensors = []
