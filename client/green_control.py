@@ -9,6 +9,10 @@ import serial
 import io
 import configparser
 from optparse import OptionParser
+from server import Database
+
+VERBOSE_LEVEL = 1
+
 
 class Mode(Enum):
 	unkown = -1
@@ -22,10 +26,9 @@ class ScheduleError(Exception):
 
 class Schedule(object):
 
-	def __init__(self, db_id, cursor, db_lock):
-		self.db_lock = db_lock
+	def __init__(self, db_id, database):
 		self.db_id = db_id
-		self.cursor = cursor
+		self.database = database
 		self.days = []
 		for day in range(7):
 			self.days.append([])
@@ -34,7 +37,6 @@ class Schedule(object):
 	
 	def get_schedule(self,day, hour, minute):
 		half_hour = hour*2 + minute//30
-		
 		return self.days[day][half_hour]
 		
 	def get_state_now(self):
@@ -50,20 +52,16 @@ class Schedule(object):
 			return time.time()%(active_time + delay_time) < active_time
 
 	def load_schedule(self):
-		self.db_lock.acquire()
-		self.cursor.execute("SELECT active_time, delay_time FROM schedule WHERE actuator_id = %s", [self.db_id])
-		if self.cursor.rowcount == 336:
+		rows = self.database.execute("SELECT active_time, delay_time FROM schedule WHERE actuator_id = %s", [self.db_id], False)
+		if len(rows) == 336:
 			count = 0;
-			for row in self.cursor:
-				#if self.days[count//48][count%48] != row[0]:
-				#	print("Updating {0} {1} : {2}".format(count//48,count%48,row[0]))
-				self.days[count//48][count%48][0] = row[0]
-				self.days[count//48][count%48][1] = row[1]
+			for row in rows:
+				self.days[count//48][count%48][0] = row["active_time"]
+				self.days[count//48][count%48][1] = row["delay_time"]
 				count += 1
 				
 		else:
 			raise ScheduleError("Invalid number of schedule slots returned: {0}".format(self.cursor.rowcount))
-		self.db_lock.release()
 
 	def save_schedule(self):
 		pass
@@ -73,58 +71,60 @@ class Rule(object):
 
 class Actuator(object):
 
-	def __init__(self, db_id, cursor, coms, pin, db_lock):
+	def __init__(self, db_id, database, coms, pin):
 		self.db_id = db_id
-		self.cursor = cursor
+		self.database = database
 		self.coms = coms
 		self.pin = pin
-		self.db_lock = db_lock
 		self.update_interval = 5
 		self.next_update = 0
-		self.schedule = Schedule(db_id, cursor, db_lock)
+		self.schedule = Schedule(db_id, database)
 		self.rules = []
 		self.mode = Mode(-1)
 		self.state = -1 # -1 for unkown state
 		self.name = ""
-		self.internal_update_settings()
-
+		self.update_settings()
+		
+	'''
+	Gets the current actuator configuration from the server.
+	'''
 	def update_settings(self):
 		if self.next_update < time.time():
-			threading.Thread(target=self.internal_update_settings).start()
-		
-	def internal_update_settings(self):
-		self.db_lock.acquire()
-		self.cursor.execute("SELECT name, mode_id FROM actuators WHERE id = %s", [self.db_id])
-		if self.cursor.rowcount == 1:
-			self.name, mode = self.cursor.fetchone()
-			new_mode = Mode(mode)
-			if new_mode != self.mode:
-				self.mode = new_mode
-				print("{0} mode set to {1}".format(self.name, self.mode.name))	
-		else:
-			raise BaseException("No Actuator in database: {0}".format(self.db_id))
-		self.db_lock.release()
-		
-		if self.mode == Mode.program:
-			self.schedule.load_schedule();
-		
-		self.set_status()
-		self.next_update = time.time() + self.update_interval
+			rows = self.database.execute("SELECT name, mode_id FROM actuators WHERE id = %s", [self.db_id], False)
+			if len(rows) == 1:
+				self.name, mode = rows[0]["name"], rows[0]["mode_id"]
+				new_mode = Mode(mode)
+				if new_mode != self.mode:
+					self.mode = new_mode
+					print("{0} mode set to {1}".format(self.name, self.mode.name))	
+			else:
+				raise BaseException("No Actuator in database: {0}".format(self.db_id))
+			
+			if self.mode == Mode.program:
+				self.schedule.load_schedule();
+			
+			self.update_relay()
+			self.next_update = time.time() + self.update_interval
 
-	def update(self):
-		self.update_relay()
-
+	'''
+	Updates the check the relay is in the correct state and toggles if 
+	required. Uploads the new state to the server.
+	'''
 	def update_relay(self):
 		new_state = self.compute_state()
 		if new_state != self.state:
 			print("{0} => {1}".format(self.name, "Active" if new_state == 1 else "Off"))
 			self.state = new_state
-			print("Pin {0}, State {1}".format(self.pin, self.state))
-			print("{0:b}".format((self.state^1) << 4 | self.pin), (self.state^1) << 4 | self.pin)
+			if VERBOSE_LEVEL > 1:
+				print("Pin {0}, State {1}".format(self.pin, self.state))
+				print("{0:b}".format((self.state^1) << 4 | self.pin), (self.state^1) << 4 | self.pin)
 			self.coms.write(bytes([(self.state^1) << 4 | self.pin]))
 			self.set_status()
 
-
+	'''
+	Computes the state for the relay based on the current mode, schedule,
+	and rules.
+	'''
 	def compute_state(self):
 		if self.mode == Mode.on:
 			return 1
@@ -140,6 +140,9 @@ class Actuator(object):
 		else:
 			raise BaseException("Invalid Actuator Mode!")
 
+	'''
+	Send the current state of the actuator to the server.
+	'''
 	def set_status(self):
 		status = ""
 		if self.mode == Mode.on:
@@ -156,32 +159,26 @@ class Actuator(object):
 			status = "Relay Not Configured"
 		else:
 			status = "Error setting relay mode!"
-		self.db_lock.acquire()
-		self.cursor.execute("UPDATE actuators SET status=%s WHERE id=%s", [status, self.db_id])
-		self.db_lock.release()
+		self.database.execute("UPDATE actuators SET status=%s WHERE id=%s", [status, self.db_id], allow_fail=True)
 			
 
 class Sensor(object):
 
-	def __init__(self, db_id, cursor, db_lock):
+	def __init__(self, db_id, database):
 		self.db_id = db_id
 		self.next_log = 0
 		self.log_interval = 1200
 		self.log_enabled = False
 		self.pin = 0
-		self.db_lock = db_lock
-		self.cursor = cursor
+		self.database = database
 		self.is_valid = True
-		print(self.db_id)
-		self.db_lock.acquire()
-		self.cursor.execute("SELECT pin, log FROM sensors WHERE id = %s", [self.db_id])
-		if self.cursor.rowcount == 1:
-			row = self.cursor.fetchone()
-			self.pin = int(row[0])
-			self.log_enabled = row[1] == 1
+		rows = self.database.execute("SELECT pin, log FROM sensors WHERE id = %s", [self.db_id], False)
+		if len(rows) == 1:
+			self.pin = int(rows[0]['pin'])
+			self.log_enabled = rows[0]['log'] == 1
 		else:
 			raise BaseException("No Sensor in database")
-		self.db_lock.release()
+		print("Sensor",self.db_id,"logging =","enabled" if self.log_enabled else "disabled")
 
 		self.test_value = 0
 		
@@ -192,16 +189,14 @@ class Sensor(object):
 	def log(self):
 		if self.log_enabled:
 			if self.next_log < time.time() and self.is_valid:
-				threading.Thread(target=self.internal_log).start()
-				
-				
-	def internal_log(self):
-		self.db_lock.acquire()
-		print("Sensor {0} = {1}".format(self.db_id, self.read()))
-		self.cursor.execute("INSERT INTO sensor_data (sensor_id, value, time) VALUE (%s, %s, %s)", [self.db_id, self.read(), time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())])
-		self.next_log = time.time() + self.log_interval
-		self.db_lock.release()
-				
+				print("Sensor {0} = {1}".format(self.db_id, self.read()))
+				self.database.execute("INSERT INTO sensor_data (sensor_id, value, time) VALUE (%s, %s, %s)", 
+					[self.db_id, self.read(), time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())],
+					require_commit=True, 
+					allow_fail=True, 
+					cache_on_fail=True)
+				self.next_log = time.time() + self.log_interval
+
 	def read(self):
 		self.test_value += 0.1
 		return 18 + math.sin(time.time()/86400.0*2*math.pi+self.db_id)*10 + random.uniform(-1.5, 1.5)
@@ -213,8 +208,8 @@ class Clock(Sensor):
 		
 class ArduinoSensor(Sensor):
 	
-	def __init__(self, db_id, cursor, db_lock):
-		Sensor.__init__(self, db_id, cursor, db_lock)
+	def __init__(self, db_id, database):
+		Sensor.__init__(self, db_id, database)
 		self.is_valid = False
 		self.value = 0
 		
@@ -268,49 +263,49 @@ if __name__ == "__main__":
 	config = configparser.ConfigParser()
 	config.read(options.config)
 	
-	db_lock = threading.Lock()
-	connection = pymysql.connect(host=config['SQL CREDS']['host'], 
-		port=int(config['SQL CREDS']['port']), 
-		user=config['SQL CREDS']['user'], 
-		password=config['SQL CREDS']['password'], 
-		db=config['SQL CREDS']['db'])
-	cursor = connection.cursor()
+	database = Database(options.config);
+		
+	coms = io.BytesIO(); 
+	#coms = serial.Serial("/dev/ttyUSB0")
 	
-	#coms = io.BytesIO(); 
-	coms = serial.Serial("/dev/ttyUSB0")
-	
-	print("Fetching sensor information... ",end="")
+	print("Fetching sensor information... ",)
 	sensors = []
-	sensors.append(Clock(1, cursor, db_lock))
-	sensors.append(DHT_Temp(3, cursor, db_lock))
-	sensors.append(DHT_Humid(4, cursor, db_lock))
-	sensors.append(DHT_Temp(5, cursor, db_lock))
-	sensors.append(DHT_Humid(6, cursor, db_lock))
-	sensors.append(DHT_Temp(7, cursor, db_lock))
-	sensors.append(DHT_Humid(8, cursor, db_lock))
-	sensors.append(DHT_Temp(9, cursor, db_lock))
-	sensors.append(DHT_Humid(10, cursor, db_lock))
-	sensors.append(Sensor(11, cursor, db_lock))
-	sensors.append(Moisture_Probe(12, cursor, db_lock))
-	connection.commit()
+	sensors.append(Clock(1, database))
+	sensors.append(DHT_Temp(3, database))
+	sensors.append(DHT_Humid(4, database))
+	sensors.append(DHT_Temp(5, database))
+	sensors.append(DHT_Humid(6, database))
+	sensors.append(DHT_Temp(7, database))
+	sensors.append(DHT_Humid(8, database))
+	sensors.append(DHT_Temp(9, database))
+	sensors.append(DHT_Humid(10, database))
+	sensors.append(Sensor(11, database))
+	sensors.append(Moisture_Probe(12, database))
 	print("Done!\n")
+	
 	
 	print("Fetching actuator information... ")
 	actuators = []
-	actuators.append(Actuator(1, cursor, coms, 13, db_lock))
-	actuators.append(Actuator(2, cursor, coms, 12, db_lock))
-	actuators.append(Actuator(3, cursor, coms, 11, db_lock))
-	actuators.append(Actuator(4, cursor, coms, 10, db_lock))
-	actuators.append(Actuator(5, cursor, coms, 9,  db_lock))
-	actuators.append(Actuator(6, cursor, coms, 8,  db_lock))
-	actuators.append(Actuator(7, cursor, coms, 7,  db_lock))
-	actuators.append(Actuator(8, cursor, coms, 6,  db_lock))
+	actuators.append(Actuator(1, database, coms, 13))
+	actuators.append(Actuator(2, database, coms, 12))
+	actuators.append(Actuator(3, database, coms, 11))
+	actuators.append(Actuator(4, database, coms, 10))
+	actuators.append(Actuator(5, database, coms, 9))
+	actuators.append(Actuator(6, database, coms, 8))
+	actuators.append(Actuator(7, database, coms, 7))
+	actuators.append(Actuator(8, database, coms, 6))
 	
 	print("Actuators configured!\n")
-
+	
+	running = True
+	
+	def actuator_monitor():
+		while running:
+			for actuator in actuators:
+				actuator.update_relay()
+	
 	print("Taking control of the greenhouse now!")
 	try:
-		count = 0
 		while True:
 			
 			while (coms.inWaiting() > 0):
@@ -323,17 +318,9 @@ if __name__ == "__main__":
 					
 			for actuator in actuators:
 				actuator.update_settings()
-			
-			for actuator in actuators:
-				actuator.update()
-			
-			db_lock.acquire()
-			connection.commit()
-			db_lock.release()
-			
-			time.sleep(0.5)
-			count += 1
+						
 	except KeyboardInterrupt:
+		running = False
 		coms.close()
 
 	
