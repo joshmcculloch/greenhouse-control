@@ -32,6 +32,7 @@ class Database(object):
 					db			= self.config['SQL CREDS']['db'],
 					cursorclass=pymysql.cursors.DictCursor)
 				self.connected = True
+				self.connection.socket.settimeout(10)
 				print("Connected to",self.config['SQL CREDS']['host'])
 			except pymysql.err.OperationalError:
 				print("Unable to connect to database... retrying in 5sec")
@@ -54,7 +55,8 @@ class Database(object):
 					with self.connection.cursor() as cursor:
 						cursor.execute(query, params);
 						result = cursor.fetchall()
-						self.connection.commit()
+						if require_commit:
+							self.connection.commit()
 						self.db_lock.release()
 						return result
 						
@@ -63,6 +65,17 @@ class Database(object):
 					print("Starting the reconnection procedure")
 					self.connected = False
 					threading.Thread(target=self.open_connection).start()
+					result = False
+					self.db_lock.release()
+					#if we are allowed to fail we will return false otherwise wait 1 sec and try again
+					if allow_fail:
+						return False
+					else:
+						sleep(1)
+				
+				except pymysql.err.InternalError:
+					print("Internal Error");
+					print("Not sure what caused this, will handled this as a failed query")
 					result = False
 					self.db_lock.release()
 					#if we are allowed to fail we will return false otherwise wait 1 sec and try again
