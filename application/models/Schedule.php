@@ -58,6 +58,8 @@ class Schedule extends CI_Model
     function set_schedule($actuator_id, $day, $half_hour, $active_time, $delay_time) {
         $this->db->query('UPDATE schedule SET active_time=?, delay_time=? WHERE actuator_id=? AND day=? AND half_hour=?',
             array($active_time, $delay_time, $actuator_id, $day, $half_hour));
+        $this->db->query('UPDATE actuators SET revision=(revision+1)WHERE id=?',
+            array($actuator_id));
     }
 
 }

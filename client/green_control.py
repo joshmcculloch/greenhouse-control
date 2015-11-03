@@ -78,6 +78,7 @@ class Actuator(object):
 		self.database = database
 		self.coms = coms
 		self.pin = pin
+		self.revision = 0
 		self.update_interval = 5
 		self.next_update = 0
 		self.schedule = Schedule(db_id, database)
@@ -92,9 +93,9 @@ class Actuator(object):
 	'''
 	def update_settings(self):
 		if self.next_update < time.time():
-			rows = self.database.execute("SELECT name, mode_id FROM actuators WHERE id = %s", [self.db_id], False)
+			rows = self.database.execute("SELECT name, mode_id, revision FROM actuators WHERE id = %s", [self.db_id], False)
 			if len(rows) == 1:
-				self.name, mode = rows[0]["name"], rows[0]["mode_id"]
+				self.name, mode, current_revision = rows[0]["name"], rows[0]["mode_id"], rows[0]["revision"]
 				new_mode = Mode(mode)
 				if new_mode != self.mode:
 					self.mode = new_mode
@@ -102,7 +103,10 @@ class Actuator(object):
 			else:
 				raise BaseException("No Actuator in database: {0}".format(self.db_id))
 			
-			if self.mode == Mode.program:
+			if self.mode == Mode.program and self.revision < current_revision:
+				if VERBOSE_LEVEL > 0:
+					print("Fetching new schedule")
+				self.revision = current_revision
 				self.schedule.load_schedule();
 			
 			self.update_relay()
@@ -160,9 +164,7 @@ class Actuator(object):
 			status = "Relay Not Configured"
 		else:
 			status = "Error setting relay mode!"
-		result = self.database.execute("UPDATE actuators SET status=%s WHERE id=%s", [status, self.db_id], allow_fail=True)
-		if result == False:
-			print("unable to date actuator state on website")
+		self.database.execute("UPDATE actuators SET status=%s WHERE id=%s", [status, self.db_id], allow_fail=True)
 			
 
 class Sensor(object):
