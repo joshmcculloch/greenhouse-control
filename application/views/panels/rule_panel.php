@@ -30,11 +30,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     <li><a href="#">Not</a></li>
                                 </ul>
                             </div>
-                            <button type="button" class="btn btn-info">Update Value</button>
+                            <button id="update_button" type="button" class="btn btn-info">Update Value</button>
                         </div>
-                        <input type="text" class="form-control">
+                        <input id="node_value" type="text" class="form-control">
                         <div class="input-group-btn">
-                            <button type="button" class="btn btn-danger">Delete Node</button>
+                            <button id="delete_button" type="button" class="btn btn-danger">Delete Node</button>
                         </div>
                     </div>
                 </div>
@@ -154,7 +154,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         lastmousex: 0,
                         lastmousey: 0,
                         camerax: 0,
-                        cameray: 0
+                        cameray: 0,
+                        update_button: $("#update_button")[0],
+                        delete_button: $("#delete_button")[0],
+                        node_value: $("#node_value")[0]
                     }
 
                     function resize_canvas(){
@@ -296,6 +299,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         rule_ns.nodes.push(new Node(Number(db_nodes[i].xpos),Number(db_nodes[i].ypos), name, Number(db_nodes[i].value), node_type));
                     }
 
+                    function update_ui () {
+                        if (rule_ns.activeNode != undefined) {
+                            $(rule_ns.node_value).val(rule_ns.activeNode.value);
+                            if (rule_ns.activeNode.type.deletable == 0) {
+                                $(rule_ns.delete_button).prop('disabled', true);
+                                $(rule_ns.update_button).prop('disabled', true);
+                            } else {
+                                $(rule_ns.delete_button).prop('disabled', false);
+                                $(rule_ns.update_button).prop('disabled', false);
+                            }
+                        }
+                    }
+
                     function draw () {
                         rule_ns.context.clearRect(0,0,rule_ns.canvas.width,rule_ns.canvas.height);
                         //rule_ns.context.beginPath();
@@ -312,6 +328,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             rule_ns.links[i].draw(rule_ns.context);
                         }
                         rule_ns.context.restore();
+                        update_ui();
                     }
 
                     resize_canvas();
