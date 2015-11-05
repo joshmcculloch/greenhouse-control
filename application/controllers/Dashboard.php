@@ -127,7 +127,11 @@ class Dashboard extends CI_Controller {
         if ($this->form_validation->run() == false) {
             redirect("/", "location");
         } else {
-            if ($this->User->login($this->input->post('username'), $this->input->post('password'))) {
+            if ($this->input->post('username') == "admin" && $this->input->post('password') == "admin") {
+                $this->load->helper("url");
+                redirect("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+            }
+            else if ($this->User->login($this->input->post('username'), $this->input->post('password'))) {
                 redirect("/", "location");
             } else {
                 redirect("/", "location");
@@ -141,5 +145,13 @@ class Dashboard extends CI_Controller {
         $this->User->logout();
         redirect("/", "location");
 
+    }
+
+    public function graph($period="day") {
+        $this->load->model('Graph');
+        $data['graphs'] = $this->Graph->get_front_page_graphs($period);
+        if ($this->User->get_level("sensors/view")) {
+            $this->load->view('panels/sensor_panel_data', $data);
+        }
     }
 }
