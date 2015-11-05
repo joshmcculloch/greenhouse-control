@@ -195,6 +195,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         var diffx = x - rule_ns.lastmousex;
                         var diffy = y - rule_ns.lastmousey;
 
+                        if (diffx == 0 && diffy == 0) {
+                            return;
+                        }
+
                         rule_ns.lastmousex = x;
                         rule_ns.lastmousey = y;
 
