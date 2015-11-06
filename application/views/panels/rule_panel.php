@@ -23,18 +23,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     Create Node <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                    <li><a href="#">Less Than</a></li>
-                                    <li><a href="#">Greater Than</a></li>
-                                    <li><a href="#">And</a></li>
-                                    <li><a href="#">Or</a></li>
-                                    <li><a href="#">Not</a></li>
+                                    <li><a href="#" onclick="return create_node(3);">Less Than</a></li>
+                                    <li><a href="#" onclick="return create_node(2);">Greater Than</a></li>
+                                    <li><a href="#" onclick="return create_node(4);">And</a></li>
+                                    <li><a href="#" onclick="return create_node(5);">Or</a></li>
+                                    <li><a href="#" onclick="return create_node(6);">Not</a></li>
                                 </ul>
                             </div>
-                            <button id="update_button" type="button" class="btn btn-info">Update Value</button>
+                            <button id="update_button" type="button" class="btn btn-info" onclick="update_node_value();">Update Value</button>
                         </div>
                         <input id="node_value" type="text" class="form-control">
                         <div class="input-group-btn">
-                            <button id="delete_button" type="button" class="btn btn-danger">Delete Node</button>
+                            <button id="delete_button" type="button" class="btn btn-danger" onclick="delete_node()">Delete Node</button>
                         </div>
                     </div>
                 </div>
@@ -98,7 +98,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         context.fillStyle="black";
                         context.font = "10px serif";
                         context.fillText(this.text, this.posx + 5, this.posy + 15);
-                        context.fillText(this.value, this.posx + 5, this.posy + 30);
+                        if (Number(this.type.has_value) == 1) {
+                            context.fillText(this.value, this.posx + 5, this.posy + 30);
+                        }
 
                     };
 
@@ -162,6 +164,47 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                     function resize_canvas(){
                         rule_ns.canvas.width = $("#canvas_div").innerWidth();
+                        draw();
+                    }
+
+                    function create_node(type_id) {
+                        console.log("creating node:", type_id);
+                        var node_type;
+                        for(var j=0; j<db_nodetypes.length; j++) {
+                            if (db_nodetypes[j].id == type_id) {
+                                node_type = db_nodetypes[j];
+                            }
+                        }
+                        var name = node_type.name;
+                        rule_ns.nodes.push(new Node(rule_ns.camerax+rule_ns.canvas.width/2,
+                            rule_ns.cameray+rule_ns.canvas.height/2,
+                            name,
+                            0,
+                            node_type));
+                        return false;
+                    }
+
+                    function update_node_value() {
+                        if (rule_ns.activeNode != undefined) {
+                            rule_ns.activeNode.value = Number($(rule_ns.node_value).val());
+                        }
+                    }
+
+                    function delete_node() {
+                        var index = rule_ns.nodes.indexOf(rule_ns.activeNode);
+                        if (index >= 0) {
+                            for(var i=(rule_ns.links.length-1); i>=0;  i--) {
+                                if (rule_ns.links[i].node_in == rule_ns.activeNode ||
+                                    rule_ns.links[i].node_out == rule_ns.activeNode) {
+                                    rule_ns.links[i].node_in.inputs -= 1;
+                                    console.log("deleting link:", i);
+                                    rule_ns.links.splice(i,1);
+                                }
+                            }
+                            console.log("deleting node:", index);
+                            rule_ns.nodes.splice(index, 1);
+                        }
+                        rule_ns.selectedNode = undefined;
                         draw();
                     }
 
@@ -313,6 +356,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                 $(rule_ns.delete_button).prop('disabled', false);
                                 $(rule_ns.update_button).prop('disabled', false);
                             }
+                        } else {
+                            $(rule_ns.node_value).val(0);
+                            $(rule_ns.delete_button).prop('disabled', true);
+                            $(rule_ns.update_button).prop('disabled', true);
                         }
                     }
 
