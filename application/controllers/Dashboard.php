@@ -154,4 +154,133 @@ class Dashboard extends CI_Controller {
             $this->load->view('panels/sensor_panel_data', $data);
         }
     }
+
+    public function create_node()
+    {
+        if ($this->User->get_level("config/rules/edit")) {
+
+            //$actuator_id, $type_id, $xpos, $ypos, $value
+            $this->load->helper('url');
+            $this->load->library('form_validation');
+            $this->load->model('Rules');
+
+            $this->form_validation->set_rules('actuator_id', 'actuator_id', 'required|numeric');
+            $this->form_validation->set_rules('type_id', 'type_id', 'required|numeric');
+            $this->form_validation->set_rules('xpos', 'xpos', 'required|numeric');
+            $this->form_validation->set_rules('ypos', 'ypos', 'required|numeric');
+            $this->form_validation->set_rules('value', 'value', 'required|numeric');
+
+            if ($this->form_validation->run() == false) {
+                echo "ERROR";//json_encode($this->Actuator->get_actuators());
+            } else {
+                echo $this->Rules->createNode(
+                    $this->input->post('actuator_id'),
+                    $this->input->post('type_id'),
+                    $this->input->post('xpos'),
+                    $this->input->post('ypos'),
+                    $this->input->post('value')
+                );
+            }
+        }
+    }
+
+    public function update_node()
+    {
+        if ($this->User->get_level("config/rules/edit")) {
+
+            //$id, $xpos, $ypos, $value
+            $this->load->helper('url');
+            $this->load->library('form_validation');
+            $this->load->model('Rules');
+
+            $this->form_validation->set_rules('id', 'id', 'required|numeric');
+            $this->form_validation->set_rules('xpos', 'xpos', 'required|numeric');
+            $this->form_validation->set_rules('ypos', 'ypos', 'required|numeric');
+            $this->form_validation->set_rules('value', 'value', 'required|numeric');
+
+            if ($this->form_validation->run() == false) {
+                echo "ERROR";//json_encode($this->Actuator->get_actuators());
+            } else {
+                $this->Rules->updateNode(
+                    $this->input->post('id'),
+                    $this->input->post('xpos'),
+                    $this->input->post('ypos'),
+                    $this->input->post('value')
+                );
+                echo "SUCCESS";
+            }
+        }
+    }
+
+    public function link_nodes()
+    {
+        if ($this->User->get_level("config/rules/edit")) {
+
+            //$node_in, $node_out
+            $this->load->helper('url');
+            $this->load->library('form_validation');
+            $this->load->model('Rules');
+
+            $this->form_validation->set_rules('node_in', 'node_in', 'required|numeric');
+            $this->form_validation->set_rules('node_out', 'node_out', 'required|numeric');
+            $this->form_validation->set_rules('actuator', 'actuator', 'required|numeric');
+
+            if ($this->form_validation->run() == false) {
+                echo "ERROR";//json_encode($this->Actuator->get_actuators());
+            } else {
+                $this->Rules->linkNodes(
+                    $this->input->post('actuator'),
+                    $this->input->post('node_in'),
+                    $this->input->post('node_out')
+                );
+                echo "SUCCESS";
+            }
+        }
+    }
+
+    public function unlink_nodes()
+    {
+        if ($this->User->get_level("config/rules/edit")) {
+
+            //$node_in, $node_out
+            $this->load->helper('url');
+            $this->load->library('form_validation');
+            $this->load->model('Rules');
+
+            $this->form_validation->set_rules('node_in', 'node_in', 'required|numeric');
+            $this->form_validation->set_rules('node_out', 'node_out', 'required|numeric');
+
+            if ($this->form_validation->run() == false) {
+                echo "ERROR";//json_encode($this->Actuator->get_actuators());
+            } else {
+                $this->Rules->unlinkNodes(
+                    $this->input->post('node_in'),
+                    $this->input->post('node_out')
+                );
+                echo "SUCCESS";
+            }
+        }
+    }
+
+    public function delete_node()
+    {
+        if ($this->User->get_level("config/rules/edit")) {
+
+            //$id
+            $this->load->helper('url');
+            $this->load->library('form_validation');
+            $this->load->model('Rules');
+
+            $this->form_validation->set_rules('id', 'id', 'required|numeric');
+
+            if ($this->form_validation->run() == false) {
+                echo "ERROR";//json_encode($this->Actuator->get_actuators());
+            } else {
+                $this->Rules->deleteNode(
+                    $this->input->post('id')
+                );
+                echo "SUCCESS";
+            }
+        }
+    }
 }

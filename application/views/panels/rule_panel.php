@@ -46,7 +46,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                     var type_colours = {"bool": "rgb(255,0,0)", "float": "rgb(0,255,0)"};
 
-                    function Node(posx, posy, name, value, type) {
+                    function Node(db_id, posx, posy, name, value, type) {
+                        this.db_id = db_id;
                         this.posx = posx;
                         this.posy = posy;
                         this.width = 100;
@@ -167,6 +168,52 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         draw();
                     }
 
+                    function update_node_on_db (node) {
+                        console.log("Updating node on db");
+                        console.log(node.db_id, node.posx, node.posy, node.value);
+                        $.ajax({
+                            url: '<?php echo base_url();?>index.php/dashboard/update_node',
+                            method: "POST",
+                            dataType: "json",
+                            data: {
+                                id: node.db_id,
+                                xpos: node.posx,
+                                ypos: node.posy,
+                                value: node.value,
+                                <?php echo $this->security->get_csrf_token_name().': \''.$this->security->get_csrf_hash().'\''; ?>
+                            }
+                        })
+                    }
+
+                    function link_nodes_on_db (node_out, node_in) {
+                        console.log("Linking nodes on db");
+                        $.ajax({
+                            url: '<?php echo base_url();?>index.php/dashboard/link_nodes',
+                            method: "POST",
+                            dataType: "json",
+                            data: {
+                                node_in: node_in.db_id,
+                                node_out: node_out.db_id,
+                                actuator: <?php echo $actuator_id; ?>,
+                                <?php echo $this->security->get_csrf_token_name().': \''.$this->security->get_csrf_hash().'\''; ?>
+                            }
+                        })
+                    }
+
+                    function unlink_nodes_on_db (node_out, node_in) {
+                        console.log("Linking nodes on db");
+                        $.ajax({
+                            url: '<?php echo base_url();?>index.php/dashboard/unlink_nodes',
+                            method: "POST",
+                            dataType: "json",
+                            data: {
+                                node_in: node_in.db_id,
+                                node_out: node_out.db_id,
+                                <?php echo $this->security->get_csrf_token_name().': \''.$this->security->get_csrf_hash().'\''; ?>
+                            }
+                        })
+                    }
+
                     function create_node(type_id) {
                         console.log("creating node:", type_id);
                         var node_type;
@@ -176,17 +223,46 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             }
                         }
                         var name = node_type.name;
-                        rule_ns.nodes.push(new Node(rule_ns.camerax+rule_ns.canvas.width/2,
+                        var node = new Node(-1,
+                            rule_ns.camerax+rule_ns.canvas.width/2,
                             rule_ns.cameray+rule_ns.canvas.height/2,
                             name,
                             0,
-                            node_type));
+                            node_type);
+                        rule_ns.nodes.push(node)
+
+                        function update_node_id(data, status) {
+                            if (status == 'success') {
+                                console.log(data)
+                                for(var i=0; i<rule_ns.nodes.length; i++) {
+                                    if (rule_ns.nodes[i].db_id == -1) {
+                                        rule_ns.nodes[i].db_id = Number(data);
+                                        console.log("setting", i, "to", data);
+                                    }
+                                }
+                            }
+                        }
+
+                        $.ajax({
+                            url: '<?php echo base_url();?>index.php/dashboard/create_node',
+                            method: "POST",
+                            dataType: "json",
+                            data: {
+                                actuator_id: <?php echo $actuator_id; ?>,
+                                type_id: type_id,
+                                xpos: node.posx,
+                                ypos: node.posy,
+                                value: node.value,
+                                <?php echo $this->security->get_csrf_token_name().': \''.$this->security->get_csrf_hash().'\''; ?>
+                            }
+                        }).done(update_node_id);
                         return false;
                     }
 
                     function update_node_value() {
                         if (rule_ns.activeNode != undefined) {
                             rule_ns.activeNode.value = Number($(rule_ns.node_value).val());
+                            update_node_on_db(rule_ns.activeNode);
                         }
                     }
 
@@ -203,7 +279,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             }
                             console.log("deleting node:", index);
                             rule_ns.nodes.splice(index, 1);
+                            $.ajax({
+                                url: '<?php echo base_url();?>index.php/dashboard/delete_node',
+                                method: "POST",
+                                dataType: "json",
+                                data: {
+                                    id: rule_ns.activeNode.db_id,
+                                    <?php echo $this->security->get_csrf_token_name().': \''.$this->security->get_csrf_hash().'\''; ?>
+                                }
+                            })
                         }
+                        rule_ns.activeNode = undefined;
                         rule_ns.selectedNode = undefined;
                         draw();
                     }
@@ -273,6 +359,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     if (rule_ns.links[i].node_out == rule_ns.activeNode &&
                                         rule_ns.links[i].node_in == rule_ns.selectedNode) {
                                         //remove the item from links
+                                        unlink_nodes_on_db(rule_ns.links[i].node_out, rule_ns.links[i].node_in);
                                         rule_ns.links[i].unlink();
                                         rule_ns.links.splice(i, 1);
                                         deleted = true;
@@ -292,6 +379,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     rule_ns.selectedNode.inputs < rule_ns.selectedNode.type.input_count) {
                                         //Create a link
                                         rule_ns.links.push(new Link(rule_ns.activeNode, rule_ns.selectedNode));
+                                        link_nodes_on_db(rule_ns.activeNode, rule_ns.selectedNode);
                                 }
                                 rule_ns.activeNode.active = false;
                                 rule_ns.activeNode = undefined;
@@ -314,6 +402,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             } else if (rule_ns.dragging) {
                                 console.log("dragging complete");
                                 rule_ns.dragging = false;
+                                update_node_on_db(rule_ns.selectedNode);
                                 rule_ns.selectedNode = undefined;
                             }
 
@@ -325,25 +414,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         draw();
                     });
 
-
-                    for(var i=0; i<db_nodes.length; i++) {
-                        var node_type = undefined;
-                        for(var j=0; j<db_nodetypes.length; j++) {
-                            if (db_nodetypes[j].id == db_nodes[i].type_id) {
-                                node_type = db_nodetypes[j];
+                    function get_node_by_db_id(db_id) {
+                        for(var i=0; i<rule_ns.nodes.length; i++) {
+                            if (rule_ns.nodes[i].db_id == db_id) {
+                                return rule_ns.nodes[i];
                             }
                         }
-                        var name = "Unkown name!";
-                        if (Number(db_nodes[i].type_id) == 1 &&
-                            Number(db_nodes[i].sensor_id) > 0) {
-                            name = db_nodes[i].sensor_name;
-                        } else if (Number(db_nodes[i].type_id) == 7 &&
-                            Number(db_nodes[i].actuator_id) > 0) {
-                            name = db_nodes[i].actuator_name;
-                        } else {
-                            name = node_type.name;
-                        }
-                        rule_ns.nodes.push(new Node(Number(db_nodes[i].xpos),Number(db_nodes[i].ypos), name, Number(db_nodes[i].value), node_type));
+                        return false;
                     }
 
                     function update_ui () {
@@ -380,6 +457,42 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         }
                         rule_ns.context.restore();
                         update_ui();
+                    }
+
+
+                    for(var i=0; i<db_nodes.length; i++) {
+                        var node_type = undefined;
+                        for(var j=0; j<db_nodetypes.length; j++) {
+                            if (db_nodetypes[j].id == db_nodes[i].type_id) {
+                                node_type = db_nodetypes[j];
+                            }
+                        }
+                        var name = "Unkown name!";
+                        if (Number(db_nodes[i].type_id) == 1 &&
+                            Number(db_nodes[i].sensor_id) > 0) {
+                            name = db_nodes[i].sensor_name;
+                        } else if (Number(db_nodes[i].type_id) == 7 &&
+                            Number(db_nodes[i].actuator_id) > 0) {
+                            name = db_nodes[i].actuator_name;
+                        } else {
+                            name = node_type.name;
+                        }
+                        rule_ns.nodes.push(new Node(Number(db_nodes[i].id),Number(db_nodes[i].xpos),Number(db_nodes[i].ypos), name, Number(db_nodes[i].value), node_type));
+                    }
+
+                    for(var i=0; i<db_links.length; i++) {
+                        var node_out = get_node_by_db_id(Number(db_links[i].node_out));
+                        var node_in = get_node_by_db_id(Number(db_links[i].node_in));
+
+                        if (node_out == false) {
+                            console.error("Unable to find node_out");
+                        }
+                        else if (node_in == false) {
+                            console.error("Unable to find node_in");
+                        }
+                        else {
+                            rule_ns.links.push(new Link(node_out, node_in));
+                        }
                     }
 
                     resize_canvas();
