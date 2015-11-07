@@ -314,11 +314,14 @@ if __name__ == "__main__":
 	print("Actuators configured!\n")
 	
 	running = True
+	loop_time = 1.0
 	
 	def actuator_monitor():
 		while running:
+			start = time.time()
 			for actuator in actuators:
 				actuator.update_relay()
+			time.sleep(loop_time - (time.time()-start))
 	
 	print("Taking control of the greenhouse now!")
 	threading.Thread(target=actuator_monitor).start()
@@ -340,6 +343,8 @@ if __name__ == "__main__":
 					
 			for actuator in actuators:
 				actuator.update_settings()
+			
+			time.sleep(1)
 						
 	except KeyboardInterrupt:
 		running = False
