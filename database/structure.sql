@@ -1,12 +1,3 @@
--- phpMyAdmin SQL Dump
--- version 3.4.10.1deb1
--- http://www.phpmyadmin.net
---
--- Host: localhost
--- Generation Time: Sep 01, 2015 at 07:30 PM
--- Server version: 5.5.43
--- PHP Version: 5.3.10-1ubuntu3.18
-
 SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
 
@@ -31,6 +22,7 @@ CREATE TABLE IF NOT EXISTS `actuators` (
   `name` varchar(256) NOT NULL,
   `mode_id` int(11) NOT NULL,
   `status` varchar(256) NOT NULL,
+  `revision` int(11) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=9 ;
 
@@ -130,6 +122,9 @@ CREATE TABLE IF NOT EXISTS `nodetype` (
   `name` varchar(64) NOT NULL,
   `intype` varchar(64) NOT NULL,
   `outtype` varchar(64) NOT NULL,
+  `input_count` int(11) NOT NULL,
+  `deletable` tinyint(1) NOT NULL DEFAULT '1',
+  `has_value` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=8 ;
 

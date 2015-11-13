@@ -23,18 +23,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     Create Node <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                                    <li><a href="#">Less Than</a></li>
-                                    <li><a href="#">Greater Than</a></li>
-                                    <li><a href="#">And</a></li>
-                                    <li><a href="#">Or</a></li>
-                                    <li><a href="#">Not</a></li>
+                                    <li><a href="#" onclick="return create_node(3);">Less Than</a></li>
+                                    <li><a href="#" onclick="return create_node(2);">Greater Than</a></li>
+                                    <li><a href="#" onclick="return create_node(4);">And</a></li>
+                                    <li><a href="#" onclick="return create_node(5);">Or</a></li>
+                                    <li><a href="#" onclick="return create_node(6);">Not</a></li>
                                 </ul>
                             </div>
-                            <button type="button" class="btn btn-info">Update Value</button>
+                            <button id="update_button" type="button" class="btn btn-info" onclick="update_node_value();">Update Value</button>
                         </div>
-                        <input type="text" class="form-control">
+                        <input id="node_value" type="text" class="form-control">
                         <div class="input-group-btn">
-                            <button type="button" class="btn btn-danger">Delete Node</button>
+                            <button id="delete_button" type="button" class="btn btn-danger" onclick="delete_node()">Delete Node</button>
                         </div>
                     </div>
                 </div>
@@ -46,7 +46,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                     var type_colours = {"bool": "rgb(255,0,0)", "float": "rgb(0,255,0)"};
 
-                    function Node(posx, posy, name, value, type) {
+                    function Node(db_id, posx, posy, name, value, type) {
+                        this.db_id = db_id;
                         this.posx = posx;
                         this.posy = posy;
                         this.width = 100;
@@ -98,7 +99,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         context.fillStyle="black";
                         context.font = "10px serif";
                         context.fillText(this.text, this.posx + 5, this.posy + 15);
-                        context.fillText(this.value, this.posx + 5, this.posy + 30);
+                        if (Number(this.type.has_value) == 1) {
+                            context.fillText(this.value, this.posx + 5, this.posy + 30);
+                        }
 
                     };
 
@@ -154,11 +157,140 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         lastmousex: 0,
                         lastmousey: 0,
                         camerax: 0,
-                        cameray: 0
+                        cameray: 0,
+                        update_button: $("#update_button")[0],
+                        delete_button: $("#delete_button")[0],
+                        node_value: $("#node_value")[0]
                     }
 
                     function resize_canvas(){
                         rule_ns.canvas.width = $("#canvas_div").innerWidth();
+                        draw();
+                    }
+
+                    function update_node_on_db (node) {
+                        console.log("Updating node on db");
+                        console.log(node.db_id, node.posx, node.posy, node.value);
+                        $.ajax({
+                            url: '<?php echo base_url();?>index.php/dashboard/update_node',
+                            method: "POST",
+                            dataType: "json",
+                            data: {
+                                id: node.db_id,
+                                xpos: node.posx,
+                                ypos: node.posy,
+                                value: node.value,
+                                <?php echo $this->security->get_csrf_token_name().': \''.$this->security->get_csrf_hash().'\''; ?>
+                            }
+                        })
+                    }
+
+                    function link_nodes_on_db (node_out, node_in) {
+                        console.log("Linking nodes on db");
+                        $.ajax({
+                            url: '<?php echo base_url();?>index.php/dashboard/link_nodes',
+                            method: "POST",
+                            dataType: "json",
+                            data: {
+                                node_in: node_in.db_id,
+                                node_out: node_out.db_id,
+                                actuator: <?php echo $actuator_id; ?>,
+                                <?php echo $this->security->get_csrf_token_name().': \''.$this->security->get_csrf_hash().'\''; ?>
+                            }
+                        })
+                    }
+
+                    function unlink_nodes_on_db (node_out, node_in) {
+                        console.log("Linking nodes on db");
+                        $.ajax({
+                            url: '<?php echo base_url();?>index.php/dashboard/unlink_nodes',
+                            method: "POST",
+                            dataType: "json",
+                            data: {
+                                node_in: node_in.db_id,
+                                node_out: node_out.db_id,
+                                <?php echo $this->security->get_csrf_token_name().': \''.$this->security->get_csrf_hash().'\''; ?>
+                            }
+                        })
+                    }
+
+                    function create_node(type_id) {
+                        console.log("creating node:", type_id);
+                        var node_type;
+                        for(var j=0; j<db_nodetypes.length; j++) {
+                            if (db_nodetypes[j].id == type_id) {
+                                node_type = db_nodetypes[j];
+                            }
+                        }
+                        var name = node_type.name;
+                        var node = new Node(-1,
+                            rule_ns.camerax+rule_ns.canvas.width/2,
+                            rule_ns.cameray+rule_ns.canvas.height/2,
+                            name,
+                            0,
+                            node_type);
+                        rule_ns.nodes.push(node)
+
+                        function update_node_id(data, status) {
+                            if (status == 'success') {
+                                console.log(data)
+                                for(var i=0; i<rule_ns.nodes.length; i++) {
+                                    if (rule_ns.nodes[i].db_id == -1) {
+                                        rule_ns.nodes[i].db_id = Number(data);
+                                        console.log("setting", i, "to", data);
+                                    }
+                                }
+                            }
+                        }
+
+                        $.ajax({
+                            url: '<?php echo base_url();?>index.php/dashboard/create_node',
+                            method: "POST",
+                            dataType: "json",
+                            data: {
+                                actuator_id: <?php echo $actuator_id; ?>,
+                                type_id: type_id,
+                                xpos: node.posx,
+                                ypos: node.posy,
+                                value: node.value,
+                                <?php echo $this->security->get_csrf_token_name().': \''.$this->security->get_csrf_hash().'\''; ?>
+                            }
+                        }).done(update_node_id);
+                        return false;
+                    }
+
+                    function update_node_value() {
+                        if (rule_ns.activeNode != undefined) {
+                            rule_ns.activeNode.value = Number($(rule_ns.node_value).val());
+                            update_node_on_db(rule_ns.activeNode);
+                        }
+                    }
+
+                    function delete_node() {
+                        var index = rule_ns.nodes.indexOf(rule_ns.activeNode);
+                        if (index >= 0) {
+                            for(var i=(rule_ns.links.length-1); i>=0;  i--) {
+                                if (rule_ns.links[i].node_in == rule_ns.activeNode ||
+                                    rule_ns.links[i].node_out == rule_ns.activeNode) {
+                                    rule_ns.links[i].node_in.inputs -= 1;
+                                    console.log("deleting link:", i);
+                                    rule_ns.links.splice(i,1);
+                                }
+                            }
+                            console.log("deleting node:", index);
+                            rule_ns.nodes.splice(index, 1);
+                            $.ajax({
+                                url: '<?php echo base_url();?>index.php/dashboard/delete_node',
+                                method: "POST",
+                                dataType: "json",
+                                data: {
+                                    id: rule_ns.activeNode.db_id,
+                                    <?php echo $this->security->get_csrf_token_name().': \''.$this->security->get_csrf_hash().'\''; ?>
+                                }
+                            })
+                        }
+                        rule_ns.activeNode = undefined;
+                        rule_ns.selectedNode = undefined;
                         draw();
                     }
 
@@ -192,6 +324,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         var diffx = x - rule_ns.lastmousex;
                         var diffy = y - rule_ns.lastmousey;
 
+                        if (diffx == 0 && diffy == 0) {
+                            return;
+                        }
+
                         rule_ns.lastmousex = x;
                         rule_ns.lastmousey = y;
 
@@ -223,6 +359,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     if (rule_ns.links[i].node_out == rule_ns.activeNode &&
                                         rule_ns.links[i].node_in == rule_ns.selectedNode) {
                                         //remove the item from links
+                                        unlink_nodes_on_db(rule_ns.links[i].node_out, rule_ns.links[i].node_in);
                                         rule_ns.links[i].unlink();
                                         rule_ns.links.splice(i, 1);
                                         deleted = true;
@@ -242,6 +379,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                                     rule_ns.selectedNode.inputs < rule_ns.selectedNode.type.input_count) {
                                         //Create a link
                                         rule_ns.links.push(new Link(rule_ns.activeNode, rule_ns.selectedNode));
+                                        link_nodes_on_db(rule_ns.activeNode, rule_ns.selectedNode);
                                 }
                                 rule_ns.activeNode.active = false;
                                 rule_ns.activeNode = undefined;
@@ -264,6 +402,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             } else if (rule_ns.dragging) {
                                 console.log("dragging complete");
                                 rule_ns.dragging = false;
+                                update_node_on_db(rule_ns.selectedNode);
                                 rule_ns.selectedNode = undefined;
                             }
 
@@ -274,6 +413,51 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         }
                         draw();
                     });
+
+                    function get_node_by_db_id(db_id) {
+                        for(var i=0; i<rule_ns.nodes.length; i++) {
+                            if (rule_ns.nodes[i].db_id == db_id) {
+                                return rule_ns.nodes[i];
+                            }
+                        }
+                        return false;
+                    }
+
+                    function update_ui () {
+                        if (rule_ns.activeNode != undefined) {
+                            $(rule_ns.node_value).val(rule_ns.activeNode.value);
+                            if (rule_ns.activeNode.type.deletable == 0) {
+                                $(rule_ns.delete_button).prop('disabled', true);
+                                $(rule_ns.update_button).prop('disabled', true);
+                            } else {
+                                $(rule_ns.delete_button).prop('disabled', false);
+                                $(rule_ns.update_button).prop('disabled', false);
+                            }
+                        } else {
+                            $(rule_ns.node_value).val(0);
+                            $(rule_ns.delete_button).prop('disabled', true);
+                            $(rule_ns.update_button).prop('disabled', true);
+                        }
+                    }
+
+                    function draw () {
+                        rule_ns.context.clearRect(0,0,rule_ns.canvas.width,rule_ns.canvas.height);
+                        //rule_ns.context.beginPath();
+                        //rule_ns.context.rect(0,0,rule_ns.canvas.width,rule_ns.canvas.height);
+                        //rule_ns.context.fillStyle = "rgb(75,75,75)"
+                        //rule_ns.context.fill();
+
+                        rule_ns.context.save();
+                        rule_ns.context.translate(-rule_ns.camerax, -rule_ns.cameray);
+                        for(var i=0; i<rule_ns.nodes.length; i++) {
+                            rule_ns.nodes[i].draw(rule_ns.context);
+                        }
+                        for(var i=0; i<rule_ns.links.length; i++) {
+                            rule_ns.links[i].draw(rule_ns.context);
+                        }
+                        rule_ns.context.restore();
+                        update_ui();
+                    }
 
 
                     for(var i=0; i<db_nodes.length; i++) {
@@ -293,25 +477,22 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         } else {
                             name = node_type.name;
                         }
-                        rule_ns.nodes.push(new Node(Number(db_nodes[i].xpos),Number(db_nodes[i].ypos), name, Number(db_nodes[i].value), node_type));
+                        rule_ns.nodes.push(new Node(Number(db_nodes[i].id),Number(db_nodes[i].xpos),Number(db_nodes[i].ypos), name, Number(db_nodes[i].value), node_type));
                     }
 
-                    function draw () {
-                        rule_ns.context.clearRect(0,0,rule_ns.canvas.width,rule_ns.canvas.height);
-                        //rule_ns.context.beginPath();
-                        //rule_ns.context.rect(0,0,rule_ns.canvas.width,rule_ns.canvas.height);
-                        //rule_ns.context.fillStyle = "rgb(75,75,75)"
-                        //rule_ns.context.fill();
+                    for(var i=0; i<db_links.length; i++) {
+                        var node_out = get_node_by_db_id(Number(db_links[i].node_out));
+                        var node_in = get_node_by_db_id(Number(db_links[i].node_in));
 
-                        rule_ns.context.save();
-                        rule_ns.context.translate(-rule_ns.camerax, -rule_ns.cameray);
-                        for(var i=0; i<rule_ns.nodes.length; i++) {
-                            rule_ns.nodes[i].draw(rule_ns.context);
+                        if (node_out == false) {
+                            console.error("Unable to find node_out");
                         }
-                        for(var i=0; i<rule_ns.links.length; i++) {
-                            rule_ns.links[i].draw(rule_ns.context);
+                        else if (node_in == false) {
+                            console.error("Unable to find node_in");
                         }
-                        rule_ns.context.restore();
+                        else {
+                            rule_ns.links.push(new Link(node_out, node_in));
+                        }
                     }
 
                     resize_canvas();

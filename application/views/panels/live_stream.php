@@ -15,9 +15,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 </div>
             </div>
             <div class="panel-body">
-                <div class="row">
-                    <div class="col-xs-12 text-center">
-                        <img id="camera1" style="max-width: 100%;" src="/images/camera_1.jpg"/>
+                <div class="row" style="padding-left:inherit; padding-right: inherit;">
+                    <div class="col-xs-12 col-md-8 text-center" style="padding: 0;">
+                        <img id="camera1" style="width: 100%;" src="/images/camera_1.jpg"/>
+                    </div>
+                    <div class="col-xs-12 col-md-4 text-center" style="height: 100%; padding: 0;">
+                        <div class="col-xs-12 text-center" style="padding: 0px;">
+                            <img id="camera1" style="max-width: 100%;" src="/images/camera_1.jpg"/>
+                        </div>
+                        <div class="col-xs-12 text-center" style="padding: 0;">
+                            <img id="camera1" style="max-width: 100%;" src="/images/camera_1.jpg"/>
+                        </div>
                     </div>
                 </div>
                 <script>

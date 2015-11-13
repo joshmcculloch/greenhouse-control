@@ -10,6 +10,8 @@ import io
 import configparser
 from optparse import OptionParser
 from server import Database
+import sys
+from logger import Logger
 
 VERBOSE_LEVEL = 1
 
@@ -76,6 +78,7 @@ class Actuator(object):
 		self.database = database
 		self.coms = coms
 		self.pin = pin
+		self.revision = 0
 		self.update_interval = 5
 		self.next_update = 0
 		self.schedule = Schedule(db_id, database)
@@ -90,9 +93,9 @@ class Actuator(object):
 	'''
 	def update_settings(self):
 		if self.next_update < time.time():
-			rows = self.database.execute("SELECT name, mode_id FROM actuators WHERE id = %s", [self.db_id], False)
+			rows = self.database.execute("SELECT name, mode_id, revision FROM actuators WHERE id = %s", [self.db_id], False)
 			if len(rows) == 1:
-				self.name, mode = rows[0]["name"], rows[0]["mode_id"]
+				self.name, mode, current_revision = rows[0]["name"], rows[0]["mode_id"], rows[0]["revision"]
 				new_mode = Mode(mode)
 				if new_mode != self.mode:
 					self.mode = new_mode
@@ -100,10 +103,14 @@ class Actuator(object):
 			else:
 				raise BaseException("No Actuator in database: {0}".format(self.db_id))
 			
-			if self.mode == Mode.program:
+			if self.mode == Mode.program and self.revision < current_revision:
+				if VERBOSE_LEVEL > 0:
+					print("Fetching new schedule")
+				self.revision = current_revision
 				self.schedule.load_schedule();
 			
 			self.update_relay()
+			self.set_status()
 			self.next_update = time.time() + self.update_interval
 
 	'''
@@ -119,8 +126,6 @@ class Actuator(object):
 				print("Pin {0}, State {1}".format(self.pin, self.state))
 				print("{0:b}".format((self.state^1) << 4 | self.pin), (self.state^1) << 4 | self.pin)
 			self.coms.write(bytes([(self.state^1) << 4 | self.pin]))
-			self.set_status()
-
 	'''
 	Computes the state for the relay based on the current mode, schedule,
 	and rules.
@@ -167,7 +172,7 @@ class Sensor(object):
 	def __init__(self, db_id, database):
 		self.db_id = db_id
 		self.next_log = 0
-		self.log_interval = 1200
+		self.log_interval = 300
 		self.log_enabled = False
 		self.pin = 0
 		self.database = database
@@ -226,7 +231,8 @@ class DHT_Humid(ArduinoSensor):
 				self.value = float(message[2])
 			else:
 				self.is_valid = False
-				print("Sensor {0}: {1}".format(self.db_id, message[1]))
+				if VERBOSE_LEVEL > 1:
+					print("Sensor {0}: {1}".format(self.db_id, message[1]))
 	
 class DHT_Temp(ArduinoSensor):
 	
@@ -238,7 +244,8 @@ class DHT_Temp(ArduinoSensor):
 				self.value = float(message[3])
 			else:
 				self.is_valid = False
-				print("Sensor {0}: {1}".format(self.db_id, message[1]))
+				if VERBOSE_LEVEL > 1:
+					print("Sensor {0}: {1}".format(self.db_id, message[1]))
 
 class Moisture_Probe(ArduinoSensor):
 
@@ -250,10 +257,14 @@ class Moisture_Probe(ArduinoSensor):
 				self.value = float(message[2])
 			else:
 				self.is_valid = False
-				print("Sensor {0}: {1}".format(self.db_id, message[1]))
+				if VERBOSE_LEVEL > 1:
+					print("Sensor {0}: {1}".format(self.db_id, message[1]))
 
 	
 if __name__ == "__main__":
+	sys.stdout = Logger("greenhouse.log")
+	sys.stderr = Logger("greenhouse.log")
+	
 	parser = OptionParser()
 	parser.add_option("-c", "--config", dest="config",
 		help="configuration file",
@@ -303,26 +314,37 @@ if __name__ == "__main__":
 	print("Actuators configured!\n")
 	
 	running = True
+	loop_time = 1.0
 	
 	def actuator_monitor():
 		while running:
+			start = time.time()
 			for actuator in actuators:
 				actuator.update_relay()
+			time.sleep(loop_time - (time.time()-start))
 	
 	print("Taking control of the greenhouse now!")
+	threading.Thread(target=actuator_monitor).start()
+	
 	try:
 		while True:
 			
 			while (coms.inWaiting() > 0):
-				sensor_data = coms.readline().decode('utf-8')
-				for sensor in sensors:
-					sensor.arduino_msg(sensor_data)
+				try:
+					sensor_data = coms.readline().decode('utf-8')
+					for sensor in sensors:
+						sensor.arduino_msg(sensor_data)
+				except UnicodeDecodeError:
+					#Throw away the line. The buffer was full and the message is garbage.
+					continue
 				
 			for sensor in sensors:
 				sensor.log()
 					
 			for actuator in actuators:
 				actuator.update_settings()
+			
+			time.sleep(1)
 						
 	except KeyboardInterrupt:
 		running = False

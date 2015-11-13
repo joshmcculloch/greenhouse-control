@@ -41,15 +41,31 @@ WHERE actuator_id=? OR actuator_id=-1',
         return $query->result_array();
     }
 
-    function saveNode ()
-    {
-
+    function createNode ($actuator_id, $type_id, $xpos, $ypos, $value) {
+        $this->db->query('INSERT INTO nodes (actuator_id, type_id, sensor_id, value, xpos, ypos)
+VALUES (?, ?, ?, ?, ?, ?)', [$actuator_id, $type_id, 0, $value, $xpos, $ypos]);
+        return $this->db->insert_id();
     }
 
-    function saveLink ()
-    {
-
+    function updateNode($id, $xpos, $ypos, $value) {
+        $this->db->query('UPDATE nodes SET value=?, xpos=?, ypos=? WHERE id=?',
+            [$value, $xpos, $ypos, $id]);
     }
+
+    function linkNodes($actuator, $node_in, $node_out) {
+        $this->db->query('INSERT INTO nodelinks (actuator_id, node_in, node_out)
+VALUES (?, ?, ?)', [$actuator, $node_in, $node_out]);
+    }
+
+    function unlinkNodes($node_in, $node_out) {
+        $this->db->query('DELETE FROM nodelinks WHERE node_in=? AND node_out=?', [$node_in, $node_out]);
+    }
+
+    function deleteNode($id) {
+        $this->db->query('DELETE FROM nodelinks WHERE node_in=? or node_out=?', [$id, $id]);
+        $this->db->query('DELETE FROM nodes WHERE id=?', [$id]);
+    }
+
 
 }
 
