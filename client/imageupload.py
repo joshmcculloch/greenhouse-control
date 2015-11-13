@@ -1,20 +1,21 @@
 #!/usr/bin/python
 
-#from SimpleCV import Camera, Image
 import time
 import requests
 from subprocess import call
-#camera = Camera()
-#image = camera.getImage()
-#time.sleep(5)
-while True:
-	#image = camera.getImage()
-	
-	#image.save("camera.jpg")
-	call(["fswebcam","-S", "30","-r","640x480", "-F", "10", "camera.jpg"])
 
-	url = "http://green.joshmcculloch.nz/camera_upload.php"
+def capture_image(device="/dev/video0", img_no=1):
+	call(["fswebcam","-S", "30","-r","640x480", "--no-banner", "-d", device, "-F", "1", "camera.jpg"])
+
+	url = "http://green.joshmcculloch.nz/camera_upload.php?camera=%d"%img_no
 	files = {"file": open("camera.jpg", "rb")}
-	r = requests.post(url, files=files)
-	print(r.text)
+	return requests.post(url, files=files).text
+
+
+while True:
+	print("Camera 1:",capture_image("/dev/video0",1))
+	print("Camera 2:",capture_image("/dev/video1",2))
+	print("Camera 3:",capture_image("/dev/video2",3))
+
 	time.sleep(30)
+
