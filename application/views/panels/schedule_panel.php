@@ -88,7 +88,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     function toggle_paint() {
                         paint_state = (paint_state+1)%3;
 
-                        console.log(paint_state);
+                        //console.log(paint_state);
                         $("#paint_button").removeClass("btn-success btn-danger btn-warning");
                         if (paint_state == 0) {
                             $("#paint_button").addClass("btn-success").text("On");
@@ -137,7 +137,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     }
 
                     function parse_schedule(data, status) {
-                        console.log(data, status);
+                        //console.log(data, status);
                         if (status == 'success') {
                             schedule = data;
                             schedule_loaded = true;

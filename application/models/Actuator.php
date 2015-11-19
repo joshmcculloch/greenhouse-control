@@ -8,16 +8,17 @@ class Actuator extends CI_Model {
         $this->load->database();
     }
 
-    function get_actuators()
+    function get_actuators($greenhouse_id)
     {
-        $query = $this->db->query('SELECT id, name, mode_id, status FROM actuators');
+        $query = $this->db->query('SELECT id, name, mode_id, status FROM actuators WHERE greenhouse_id=?',
+            array($greenhouse_id));
         return $query->result_array();
     }
 
     function get_actuator($actuator_id)
     {
-        $query = $this->db->query('SELECT id, name, mode_id, status FROM actuators WHERE id=?', array($actuator_id));
-        return $query->result_array();
+        $query = $this->db->query('SELECT id, greenhouse_id,  name, mode_id, status FROM actuators WHERE id=?', array($actuator_id));
+        return $query->row();
     }
 
     function set_actuator($actuator_id, $mode_id)

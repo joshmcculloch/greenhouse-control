@@ -17,7 +17,8 @@ class User extends CI_Model
         $data = array(
             'username'  => '',
             'loggedin' => FALSE,
-            'userlevel' => 0
+            'userlevel' => 0,
+            'user_id' => 0
         );
         $this->session->set_userdata($data);
     }
@@ -29,12 +30,13 @@ class User extends CI_Model
     function login($username, $password) {
         $query = $this->db->query('SELECT * FROM users WHERE username like ?', array($username));
         if ($query->num_rows() == 1) {
-            $user =  $level = $query->row();
+            $user = $query->row();
             if (sha1($password) == $user->password) {
                 $data = array(
                     'username'  => $username,
                     'loggedin' => TRUE,
-                    'userlevel' => $user->level
+                    'userlevel' => $user->level,
+                    'user_id' => $user->id
                 );
 
                 $this->session->set_userdata($data);
@@ -58,7 +60,10 @@ class User extends CI_Model
         } else {
             return FALSE;
         }
+    }
 
-
+    function get_user_id()
+    {
+        return $this->session->user_id;
     }
 }

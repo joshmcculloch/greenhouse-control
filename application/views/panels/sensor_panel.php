@@ -18,6 +18,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         $id = 0;
         foreach($graphs as $graph):?>
         plot_<?php echo $id;?> = $.jqplot ('<?php echo $id; ?>_graph', [
+            [null]
+            /*
             <?php foreach($graph['sensors'] as $sensor): ?>
             [
 
@@ -26,7 +28,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                      echo '[ "'.$datum['time'].'", '.$datum['value'].'],';
                 } ?>
             ],
-            <?php endforeach; ?>
+            <?php endforeach; ?>*/
         ],{
             title: '<?php echo $graph['title'];?>',
             animate: true,
@@ -34,6 +36,17 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                 location: 'e',
                 placement: 'outsideGrid',
                 show: true
+            },
+            seriesDefaults: {
+                showMarker: true,
+                markerOptions: {
+                    show: true,
+                    style: 'filledCircle',
+                    size: 4
+                },
+                rendererOptions: {
+                    smooth: true
+                }
             },
             series: [
                 <?php foreach($graph['sensors'] as $sensor): ?>
@@ -59,9 +72,6 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             $id++;
         endforeach; ?>
 
-
-
-
         $(window).bind('resize', function(event, ui) {
             <?php
             $id = 0;
@@ -80,28 +90,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
     <div class="col-xs-12">
         <div class="panel panel-default">
             <div class="panel-heading clearfix">
-                <h3 class="panel-title pull-left" style="padding-top: 7.5px;">Sensor Data</h3><!--
-                <div class="dropdown pull-right">
-                    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                        Dropdown
-                        <span class="caret"></span>
-                    </button>
-
-                    <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenu1">
-                        <li><a href="#">Action</a></li>
-                        <li><a href="#">Another action</a></li>
-                        <li><a href="#">Something else here</a></li>
-                        <li><a href="#">Separated link</a></li>
-                    </ul>
-                </div>
-                <button class="btn btn-default pull-right" type="button" onclick="download('week')">
-                    Get Week
-                </button>-->
-
+                <h3 class="panel-title pull-left" style="padding-top: 7.5px;">Sensor Data</h3>
                 <div class="btn-group pull-right">
-                    <button class="btn btn-default btn-sm" onclick="$.getScript('/index.php/dashboard/graph/day');">Day</button>
-                    <button class="btn btn-default btn-sm" onclick="$.getScript('/index.php/dashboard/graph/week');">Week</button>
-                    <button class="btn btn-default btn-sm" onclick="$.getScript('/index.php/dashboard/graph/year');">Year</button>
+                    <button class="btn btn-default btn-sm" onclick="$.getScript('/index.php/api/graph/day');">Day</button>
+                    <button class="btn btn-default btn-sm" onclick="$.getScript('/index.php/api/graph/week');">Week</button>
+                    <button class="btn btn-default btn-sm" onclick="$.getScript('/index.php/api/graph/year');">Year</button>
                 </div>
             </div>
             <div class="panel-body">
