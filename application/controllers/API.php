@@ -18,7 +18,7 @@ class API extends CI_Controller
         }
     }
 
-    public function set_actuator_modes()
+    public function set_actuator_mode()
     {
         if ($this->User->get_level("remote-control/edit")) {
             $this->load->helper('url');
@@ -30,7 +30,7 @@ class API extends CI_Controller
             if ($this->form_validation->run() == false) {
                 echo json_encode($this->Actuator->get_actuators());
             } else {
-                $this->Actuator->set_actuator(
+                $this->Actuator->set_mode(
                     $this->input->post('id'),
                     $this->input->post('mode')
                 );
@@ -39,16 +39,12 @@ class API extends CI_Controller
         }
     }
 
-    public function get_schedule($actuator_id)
+    public function get_schedule($schedule_id)
     {
         if ($this->User->get_level("config/schedule/view")) {
             $this->load->model('Schedule');
-            echo json_encode($this->Schedule->get_schedule($actuator_id));
+            echo json_encode($this->Schedule->get_schedule_times($schedule_id));
         }
-    }
-
-    public function get_schedules() {
-
     }
 
     public function set_schedule()
@@ -201,9 +197,9 @@ class API extends CI_Controller
         }
     }
 
-    public function graph($period="day") {
+    public function graph($greenhouse_id,$period="day") {
         $this->load->model('Graph');
-        $data['graphs'] = $this->Graph->get_front_page_graphs($period);
+        $data['graphs'] = $this->Graph->get_front_page_graphs($greenhouse_id, $period);
         if ($this->User->get_level("sensors/view")) {
             $this->load->view('panels/sensor_panel_data', $data);
         }

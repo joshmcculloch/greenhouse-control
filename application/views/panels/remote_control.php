@@ -7,7 +7,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         set_status(id, "Sending...");
 
         $.ajax({
-            url: '<?php echo base_url();?>index.php/api/set_actuator_modes/<?php echo $greenhouse_id;?>',
+            url: '<?php echo base_url();?>index.php/api/set_actuator_mode/<?php echo $greenhouse_id;?>',
             method: "POST",
             dataType: "json",
             data: {

@@ -92,9 +92,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
             <div class="panel-heading clearfix">
                 <h3 class="panel-title pull-left" style="padding-top: 7.5px;">Sensor Data</h3>
                 <div class="btn-group pull-right">
-                    <button class="btn btn-default btn-sm" onclick="$.getScript('/index.php/api/graph/day');">Day</button>
-                    <button class="btn btn-default btn-sm" onclick="$.getScript('/index.php/api/graph/week');">Week</button>
-                    <button class="btn btn-default btn-sm" onclick="$.getScript('/index.php/api/graph/year');">Year</button>
+                    <button class="btn btn-default btn-sm" onclick="$.getScript('/index.php/api/graph/<?php echo $greenhouse_id; ?>/day');">Day</button>
+                    <button class="btn btn-default btn-sm" onclick="$.getScript('/index.php/api/graph/<?php echo $greenhouse_id; ?>/week');">Week</button>
+                    <button class="btn btn-default btn-sm" onclick="$.getScript('/index.php/api/graph/<?php echo $greenhouse_id; ?>/year');">Year</button>
                 </div>
             </div>
             <div class="panel-body">

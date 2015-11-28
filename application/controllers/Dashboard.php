@@ -58,6 +58,11 @@ class Dashboard extends CI_Controller {
         }
     }
 
+    public function debug (){
+        $this->Actuator->create_actuator(1, "Test actuator 1");
+        $this->Actuator->create_actuator(1, "Test actuator 2");
+    }
+
     public function configure($actuator_id)
     {
         if ($this->User->get_level("config/view")) {
@@ -70,46 +75,41 @@ class Dashboard extends CI_Controller {
             $data['greenhouse_id'] = $greenhouse_id;
 
             $this->load->view('head', $data);
+            /*
             if ($this->User->get_level("config/general/view")) {
                 $this->load->view('panels/general_config_panel', $data);
-            }
+            }*/
             if ($this->User->get_level("config/schedule/view")) {
+                $schedules = $this->Schedule->get_schedules_by_actuator($actuator_id);
+                if (count($schedules) == 0) {
+                    $this->Schedule->create_schedule($greenhouse_id, $actuator_id);
+                    $schedules = $this->Schedule->get_schedules_by_actuator($actuator_id);
+                }
                 $data["edit_schedule"] = $this->User->get_level("config/schedule/edit");
-                $this->load->view('panels/schedule_panel', $data);
+                foreach($schedules as $schedule) {
+                    $data["schedule_id"] = $schedule['id'];
+                    $this->load->view('panels/schedule_panel', $data);
+                }
+
             }
+
             if ($this->User->get_level("config/rules/view")) {
-                $data['nodes'] = $this->Rules->getNodes($actuator_id);
+                $data['rule_system_id'] = $this->Actuator->get_rule_system_id($actuator_id);
+                $data['nodes'] = $this->Rules->getNodes($data['rule_system_id']);
                 $data['nodetypes'] = $this->Rules->getNodeTypes();
                 $data['links'] = $this->Rules->getLinks($actuator_id);
                 $this->load->view('panels/rule_panel', $data);
             }
+            /*
             if ($this->User->get_level("config/tests/view")) {
                 $this->load->view('panels/test_panel', $data);
-            }
+            }*/
             $this->load->view('tail');
         } else {
             show_error('You do not have permission to access this page', 403);
         }
     }
-/*
-    public function init_schedule()
-    {
-        $this->load->helper( 'url');
-        $this->load->library('form_validation');
-        $this->load->model('Schedule');
 
-        $this->form_validation->set_rules('actuator_id', 'actuator_id', 'required');
-
-
-        if($this->form_validation->run() == false) {
-            echo json_encode(array());
-        } else {
-            $actuator_id = $this->input->post('actuator_id');
-            $this->Schedule->init_schedule($actuator_id);
-            echo json_encode($this->Schedule->get_schedule($actuator_id));
-        }
-    }
-*/
     public function login() {
         $this->load->library('form_validation');
 

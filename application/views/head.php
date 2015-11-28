@@ -41,7 +41,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         <div id="navbar" class="navbar-collapse collapse">
             <?php foreach ($greenhouses as $greenhouse) :?>
                 <ul class="nav navbar-nav">
-                    <li class="active"><a href=""><?php echo $greenhouse['name']; ?></a></li>
+                    <li class="active"><a href="/dashboard/overview/<?php echo $greenhouse['id']; ?>"><?php echo $greenhouse['name']; ?></a></li>
                 </ul>
             <?php endforeach; ?>
 

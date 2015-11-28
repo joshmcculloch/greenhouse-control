@@ -12,7 +12,7 @@ class Graph extends CI_Model
     function get_front_page_graphs($greenhouse_id, $peroid="day")
     {
         //Get all of the graphs
-        $query_graphs = $this->db->query('SELECT id, title, xaxis_title, yaxis_title FROM graphs WHERE front_page = 1');
+        $query_graphs = $this->db->query('SELECT id, title, xaxis_title, yaxis_title FROM graphs WHERE front_page=1 AND greenhouse_id=?', array($greenhouse_id));
         $graphs = array();
         foreach($query_graphs->result_array() as $graph) {
             $graph = array(
