@@ -28,14 +28,17 @@ class Node(object):
 
 class SensorNode(Node):
 	
-	def __init__(self, db_id, sensor):
+	def __init__(self, db_id):
 		Node.__init__(self,db_id)
-		self.sensor = sensor
+		self.sensor = None
 		self.inputtype = "none"
 		self.max_in = 0
 		
 	def getValue(self):
-		return self.sensor.readValue()
+		if self.sensor != None:
+			return self.sensor.read()
+		else:
+			raise Exception("Sensor has not been defined.")
 		
 	def getValueType(self):
 		return "float"
@@ -48,6 +51,7 @@ class ActuatorNode(Node):
 		self.max_in = 1
 		
 	def getValue(self):
+		#print("getting actuator value")
 		return self.nodes[0].getValue()
 		
 	def getValueType(self):
@@ -59,9 +63,13 @@ class ScheduleNode(Node):
 		Node.__init__(self,db_id)
 		self.inputtype = "none"
 		self.max_in = 0
+		self.schedule = None
 		
 	def getValue(self):
-		return False
+		if self.schedule == None:
+			raise Exception("Schedule has not been defined.")
+		#print("quering schedule")
+		return self.schedule.get_state_now()
 		
 	def getValueType(self):
 		return "bool"
@@ -75,6 +83,7 @@ class GreaterThanNode(Node):
 		self.max_in = 1
 		
 	def getValue(self):
+		#print("getting greater than value")
 		if len(self.nodes) < 1:
 			raise Exception("GreaterThanNode is missing an input")
 		return self.nodes[0].getValue() > self.value
@@ -91,6 +100,7 @@ class LessThanNode(Node):
 		self.max_in = 1
 		
 	def getValue(self):
+		#print("getting less than value")
 		if len(self.nodes) < 1:
 			raise Exception("LessThanNode is missing an input")
 		return self.nodes[0].getValue() < self.value
@@ -106,6 +116,7 @@ class AndNode(Node):
 		self.max_in = 2
 		
 	def getValue(self):
+		#print("getting and value")
 		if len(self.nodes) < 2:
 			raise Exception("AndNode is missing an input")
 		return self.nodes[0].getValue() and self.nodes[1].getValue()
@@ -121,6 +132,7 @@ class OrNode(Node):
 		self.max_in = 2
 		
 	def getValue(self):
+		#print("getting or value")
 		if len(self.nodes) < 2:
 			raise Exception("OrNode is missing an input")
 		return self.nodes[0].getValue() or self.nodes[1].getValue()
@@ -136,6 +148,7 @@ class NotNode(Node):
 		self.max_in = 1
 		
 	def getValue(self):
+		#print("getting not value")
 		if len(self.nodes) < 1:
 			raise Exception("NotNode is missing an input")
 		return not(self.nodes[0].getValue())
@@ -143,27 +156,31 @@ class NotNode(Node):
 	def getValueType(self):
 		return "bool"
 		
-
 		
 class RuleManager(object):
 	
-	def __init__(self, database, sensors):
+	def __init__(self, database, greenhouse_id):
 		self.database = database
 		self.nodes = dict()
-		self.sensors = sensors
+		self.greenhouse_id = greenhouse_id
 		self.loadNodes()
 		self.loadLinks()
 		
 	def loadNodes(self):
-		for row in self.database.execute("SELECT * FROM nodes", [], require_commit=False):
+		for row in self.database.execute("""SELECT nodes.id, nodes.type_id, nodes.value
+		FROM nodes 
+		LEFT JOIN (SELECT id, greenhouse_id, name FROM rule_system) as rs on rs.id=nodes.rule_system_id 
+		WHERE rs.greenhouse_id=%s
+		OR rs.greenhouse_id=(SELECT id 
+			FROM rule_system 
+			WHERE global=1 
+			AND greenhouse_id=(SELECT greenhouse_id 
+				FROM rule_system 
+				WHERE id=%s
+				LIMIT 1)
+			LIMIT 1)""", [self.greenhouse_id,self.greenhouse_id], require_commit=False):
 			if row['type_id'] == 1:
-				sensor = None
-				for s in self.sensors:
-					if s.db_id == row['sensor_id']:
-						sensor = s 
-				if sensor == None:
-					raise Exception("Unable to find sensor %i" %row['sensor_id'])
-				self.nodes[row['id']] = SensorNode(row['id'], None)
+				self.nodes[row['id']] = SensorNode(row['id'])
 			elif row['type_id'] == 2:
 				self.nodes[row['id']] = GreaterThanNode(row['id'], row['value'])
 			elif row['type_id'] == 3:
@@ -180,34 +197,43 @@ class RuleManager(object):
 				self.nodes[row['id']] = ScheduleNode(row['id'])
 				
 	def loadLinks(self):
-		for row in self.database.execute("SELECT * FROM nodelinks", [], require_commit=False):
+		for row in self.database.execute("SELECT nl.id, nl.node_in, nl.node_out FROM nodelinks as nl LEFT JOIN (SELECT id, greenhouse_id, name FROM rule_system) as rs on rs.id=nl.rule_system_id WHERE rs.greenhouse_id=%s", [self.greenhouse_id], require_commit=False):
 			node_in = self.nodes[row['node_in']]
 			node_out = self.nodes[row['node_out']]
 			node_in.linkNode(node_out)
+	
 			
 	def getNodeState(self, nodeid):
 		return self.nodes[nodeid].getValue()
 		
 if __name__ == "__main__":
-	from green_control import Sensor, Clock, DHT_Temp, DHT_Humid, Moisture_Probe
+	from green_control import Sensor, Schedule, load_sensors, load_schedules, load_actuators
+	import io
 	testserver = Database("greenhouse.ini")
-	
-	sensors = []
-	sensors.append(Clock(1, testserver))
-	sensors.append(DHT_Temp(3, testserver))
-	sensors.append(DHT_Humid(4, testserver))
-	sensors.append(DHT_Temp(5, testserver))
-	sensors.append(DHT_Humid(6, testserver))
-	sensors.append(DHT_Temp(7, testserver))
-	sensors.append(DHT_Humid(8, testserver))
-	sensors.append(DHT_Temp(9, testserver))
-	sensors.append(DHT_Humid(10, testserver))
-	sensors.append(Sensor(11, testserver))
-	sensors.append(Moisture_Probe(12, testserver))
+	coms = io.BytesIO()
 
-	ruleManager = RuleManager(testserver, sensors)
-	print(len(ruleManager.nodes))
-	print(ruleManager.getNodeState(15))
+
+	sensors = []
+	schedules = []
+	actuators = []
+	
+	ruleManager = RuleManager(testserver, 1)
+	load_sensors(testserver, sensors, 1, ruleManager.nodes) 
+	load_schedules(testserver, schedules, 1, ruleManager.nodes) 
+	load_actuators(testserver, actuators, 1, coms, ruleManager.nodes)
+	
+	for i in sensors:
+		if i.db_id == 5:
+			i.value = 15
+			print("Seting Greenhouse 2 Temp to",i.value)
+	
+	for i in schedules:
+		i.load_schedule()
+
+	for i in actuators:
+		print(i.name, i.compute_state())
+	#print(len(ruleManager.nodes))
+	#print(ruleManager.getNodeState(15))
 
 			
 		

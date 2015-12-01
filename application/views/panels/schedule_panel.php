@@ -88,7 +88,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     function toggle_paint() {
                         paint_state = (paint_state+1)%3;
 
-                        console.log(paint_state);
+                        //console.log(paint_state);
                         $("#paint_button").removeClass("btn-success btn-danger btn-warning");
                         if (paint_state == 0) {
                             $("#paint_button").addClass("btn-success").text("On");
@@ -110,10 +110,10 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
                             //Update the server's schedule
                             $.ajax({
-                                url: '<?php echo base_url();?>index.php/dashboard/set_schedule',
+                                url: '<?php echo base_url();?>index.php/api/set_schedule',
                                 method: "POST",
                                 data: {
-                                    actuator_id: <?php echo $actuator_id; ?>,
+                                    schedule_id: <?php echo $schedule_id; ?>,
                                     day: _day,
                                     half_hour: _half_hour,
                                     active_time: _active_time,
@@ -129,7 +129,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         // This stop the schedule for temporarily showing previous state.
                         if (mouse_down == false) {
                             $.ajax({
-                                url: '<?php echo base_url();?>index.php/dashboard/get_schedule/<?php echo $actuator_id; ?>',
+                                url: '<?php echo base_url();?>index.php/api/get_schedule/<?php echo $schedule_id; ?>',
                                 method: "get",
                                 dataType: "json"
                             }).done(parse_schedule);
@@ -137,7 +137,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     }
 
                     function parse_schedule(data, status) {
-                        console.log(data, status);
+                        //console.log(data, status);
                         if (status == 'success') {
                             schedule = data;
                             schedule_loaded = true;

@@ -7,7 +7,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         set_status(id, "Sending...");
 
         $.ajax({
-            url: '<?php echo base_url();?>index.php/control/set_control',
+            url: '<?php echo base_url();?>index.php/api/set_actuator_mode/<?php echo $greenhouse_id;?>',
             method: "POST",
             dataType: "json",
             data: {
@@ -54,7 +54,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
     function get_control(){
         $.ajax({
-            url: '<?php echo base_url();?>index.php/control/get_control',
+            url: '<?php echo base_url();?>index.php/api/get_actuator_modes/<?php echo $greenhouse_id;?>',
             method: "GET",
             dataType: "json"
         }).done(parse_control);

@@ -39,9 +39,12 @@ defined('BASEPATH') OR exit('No direct script access allowed');
         </div>
 
         <div id="navbar" class="navbar-collapse collapse">
-            <ul class="nav navbar-nav">
-                <li class="active"><a href=""><?php echo $heading; ?></a></li>
-            </ul>
+            <?php foreach ($greenhouses as $greenhouse) :?>
+                <ul class="nav navbar-nav">
+                    <li class="active"><a href="/dashboard/overview/<?php echo $greenhouse['id']; ?>"><?php echo $greenhouse['name']; ?></a></li>
+                </ul>
+            <?php endforeach; ?>
+
             <?php if (!$this->session->loggedin): ?>
             <form class="navbar-form navbar-right" method="post" action="/index.php/dashboard/login">
                 <input type="hidden" name="<?php echo $this->security->get_csrf_token_name(); ?>" value="<?php echo $this->security->get_csrf_hash(); ?>">

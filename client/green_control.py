@@ -12,6 +12,7 @@ from optparse import OptionParser
 from server import Database
 import sys
 from logger import Logger
+import rule_system
 
 VERBOSE_LEVEL = 1
 
@@ -28,14 +29,19 @@ class ScheduleError(Exception):
 
 class Schedule(object):
 
-	def __init__(self, db_id, database):
+	def __init__(self, db_id, database, nodes):
 		self.db_id = db_id
 		self.database = database
 		self.days = []
+		self.update_interval = 5
+		self.next_update = 0
 		for day in range(7):
 			self.days.append([])
 			for half_hour in range(48):
 				self.days[day].append([0,0])
+		
+		rows = self.database.execute("SELECT id, node_id FROM schedule WHERE id = %s", [self.db_id], False)	
+		nodes[rows[0]["node_id"]].schedule = self
 	
 	def get_schedule(self,day, hour, minute):
 		half_hour = hour*2 + minute//30
@@ -54,7 +60,7 @@ class Schedule(object):
 			return time.time()%(active_time + delay_time) < active_time
 
 	def load_schedule(self):
-		rows = self.database.execute("SELECT active_time, delay_time FROM schedule WHERE actuator_id = %s", [self.db_id], False)
+		rows = self.database.execute("SELECT active_time, delay_time FROM schedule_times WHERE schedule_id=%s ORDER BY day, half_hour", [self.db_id], False)
 		if len(rows) == 336:
 			count = 0;
 			for row in rows:
@@ -64,6 +70,11 @@ class Schedule(object):
 				
 		else:
 			raise ScheduleError("Invalid number of schedule slots returned: {0}".format(self.cursor.rowcount))
+		self.next_update = time.time() + self.update_interval
+		
+	def update_schedule(self):
+		if time.time() > self.next_update:
+			self.load_schedule()
 
 	def save_schedule(self):
 		pass
@@ -73,19 +84,20 @@ class Rule(object):
 
 class Actuator(object):
 
-	def __init__(self, db_id, database, coms, pin):
+	def __init__(self, db_id, database, coms, nodes):
 		self.db_id = db_id
 		self.database = database
 		self.coms = coms
-		self.pin = pin
+		self.pin = None
 		self.revision = 0
 		self.update_interval = 5
 		self.next_update = 0
-		self.schedule = Schedule(db_id, database)
 		self.rules = []
 		self.mode = Mode(-1)
 		self.state = -1 # -1 for unkown state
 		self.name = ""
+		rows = self.database.execute("SELECT id, node_id FROM actuators WHERE id = %s", [self.db_id], False)		
+		self.node = nodes[rows[0]["node_id"]]
 		self.update_settings()
 		
 	'''
@@ -93,9 +105,17 @@ class Actuator(object):
 	'''
 	def update_settings(self):
 		if self.next_update < time.time():
-			rows = self.database.execute("SELECT name, mode_id, revision FROM actuators WHERE id = %s", [self.db_id], False)
+			rows = self.database.execute("""
+			SELECT 
+				actuators.name, 
+				actuators.mode_id, 
+				actuators.revision,
+				actuators.pin 
+			FROM actuators 
+			WHERE actuators.id = %s""", [self.db_id], False)
 			if len(rows) == 1:
-				self.name, mode, current_revision = rows[0]["name"], rows[0]["mode_id"], rows[0]["revision"]
+				row = rows[0]
+				self.name, mode, current_revision, self.pin = row["name"], row["mode_id"], row["revision"], row["pin"]
 				new_mode = Mode(mode)
 				if new_mode != self.mode:
 					self.mode = new_mode
@@ -103,11 +123,12 @@ class Actuator(object):
 			else:
 				raise BaseException("No Actuator in database: {0}".format(self.db_id))
 			
+			'''
 			if self.mode == Mode.program and self.revision < current_revision:
 				if VERBOSE_LEVEL > 0:
 					print("Fetching new schedule")
 				self.revision = current_revision
-				self.schedule.load_schedule();
+				self.schedule.load_schedule();'''
 			
 			self.update_relay()
 			self.set_status()
@@ -136,10 +157,7 @@ class Actuator(object):
 		elif self.mode == Mode.off:
 			return 0
 		elif self.mode == Mode.program:
-			# Follow schedule
-			return self.schedule.get_state_now()
-			# Follow rules
-			return 0
+			return self.node.getValue()
 		elif self.mode == Mode.disabled:
 			return 0
 		else:
@@ -169,7 +187,7 @@ class Actuator(object):
 
 class Sensor(object):
 
-	def __init__(self, db_id, database):
+	def __init__(self, db_id, database, nodes):
 		self.db_id = db_id
 		self.next_log = 0
 		self.log_interval = 300
@@ -177,10 +195,11 @@ class Sensor(object):
 		self.pin = 0
 		self.database = database
 		self.is_valid = True
-		rows = self.database.execute("SELECT pin, log FROM sensors WHERE id = %s", [self.db_id], False)
+		rows = self.database.execute("SELECT pin, node_id, log FROM sensors WHERE id = %s", [self.db_id], False)
 		if len(rows) == 1:
 			self.pin = int(rows[0]['pin'])
 			self.log_enabled = rows[0]['log'] == 1
+			nodes[rows[0]["node_id"]].sensor = self
 		else:
 			raise BaseException("No Sensor in database")
 		print("Sensor",self.db_id,"logging =","enabled" if self.log_enabled else "disabled")
@@ -213,8 +232,8 @@ class Clock(Sensor):
 		
 class ArduinoSensor(Sensor):
 	
-	def __init__(self, db_id, database):
-		Sensor.__init__(self, db_id, database)
+	def __init__(self, db_id, database, nodes):
+		Sensor.__init__(self, db_id, database, nodes)
 		self.is_valid = False
 		self.value = 0
 		
@@ -260,6 +279,30 @@ class Moisture_Probe(ArduinoSensor):
 				if VERBOSE_LEVEL > 1:
 					print("Sensor {0}: {1}".format(self.db_id, message[1]))
 
+
+def load_sensors(database, sensors, greenhouse_id, nodes):
+	print("loading sensors from database...");
+	for row in database.execute("SELECT id, sensor_type, name FROM sensors WHERE greenhouse_id=%s", [greenhouse_id], require_commit=False):
+		if row["sensor_type"] == 1:
+			print("Creating DHT Temp:", row["id"])
+			sensors.append(DHT_Temp(row["id"], database, nodes))
+		elif row["sensor_type"] == 2:
+			print("Creating DHT Humidity:", row["id"])
+			sensors.append(DHT_Humid(row["id"], database, nodes))
+			
+def load_schedules(database, schedules, greenhouse_id, nodes):
+	print("loading schedules from database...");
+	for row in database.execute("SELECT id, name FROM schedule WHERE greenhouse_id=%s", [greenhouse_id], require_commit=False):
+		print("Creating schedule:", row["name"])
+		schedules.append(Schedule(row["id"], database, nodes))
+
+def load_actuators(database, actuators, greenhouse_id, coms, nodes):
+	print("loading actuators from database...");
+	for row in database.execute("SELECT id, pin, name FROM actuators WHERE greenhouse_id=%s", [greenhouse_id], require_commit=False):
+		print("Creating actuator:", row["name"])
+		actuators.append(Actuator(row["id"], database, coms, nodes))
+	
+
 	
 if __name__ == "__main__":
 	sys.stdout = Logger("greenhouse.log")
@@ -284,35 +327,21 @@ if __name__ == "__main__":
 	
 	database = Database(options.config);
 	
+	print("Loading Rule Systems...")
+	ruleManager = rule_system.RuleManager(database, 1)
+	
 	print("Fetching sensor information... ",)
 	sensors = []
-	sensors.append(Clock(1, database))
-	sensors.append(DHT_Temp(3, database))
-	sensors.append(DHT_Humid(4, database))
-	sensors.append(DHT_Temp(5, database))
-	sensors.append(DHT_Humid(6, database))
-	sensors.append(DHT_Temp(7, database))
-	sensors.append(DHT_Humid(8, database))
-	sensors.append(DHT_Temp(9, database))
-	sensors.append(DHT_Humid(10, database))
-	sensors.append(Sensor(11, database))
-	sensors.append(Moisture_Probe(12, database))
-	print("Done!\n")
-	
+	load_sensors(database, sensors, 1, ruleManager.nodes) 
+
+	print("Setting up schedules... ")
+	schedules = []
+	load_schedules(database, schedules, 1, ruleManager.nodes) 
 	
 	print("Fetching actuator information... ")
 	actuators = []
-	actuators.append(Actuator(1, database, coms, 13))
-	actuators.append(Actuator(2, database, coms, 12))
-	actuators.append(Actuator(3, database, coms, 11))
-	actuators.append(Actuator(4, database, coms, 10))
-	actuators.append(Actuator(5, database, coms, 9))
-	actuators.append(Actuator(6, database, coms, 8))
-	actuators.append(Actuator(7, database, coms, 7))
-	actuators.append(Actuator(8, database, coms, 6))
-	
-	print("Actuators configured!\n")
-	
+	load_actuators(database, actuators, 1, coms, ruleManager.nodes)
+
 	running = True
 	loop_time = 1.0
 	
@@ -329,21 +358,24 @@ if __name__ == "__main__":
 	try:
 		while True:
 			
-			while (coms.inWaiting() > 0):
-				try:
-					sensor_data = coms.readline().decode('utf-8')
-					for sensor in sensors:
-						sensor.arduino_msg(sensor_data)
-				except UnicodeDecodeError:
-					#Throw away the line. The buffer was full and the message is garbage.
-					continue
+			#~ while (coms.inWaiting() > 0):
+				#~ try:
+					#~ sensor_data = coms.readline().decode('utf-8')
+					#~ for sensor in sensors:
+						#~ sensor.arduino_msg(sensor_data)
+				#~ except UnicodeDecodeError:
+					#~ #Throw away the line. The buffer was full and the message is garbage.
+					#~ continue
 				
 			for sensor in sensors:
 				sensor.log()
 					
 			for actuator in actuators:
 				actuator.update_settings()
-			
+				
+			for schedule in schedules:
+				schedule.update_schedule()
+				
 			time.sleep(1)
 						
 	except KeyboardInterrupt:

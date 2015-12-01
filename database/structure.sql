@@ -1,4 +1,13 @@
-SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
+-- phpMyAdmin SQL Dump
+-- version 4.0.10deb1
+-- http://www.phpmyadmin.net
+--
+-- Host: localhost
+-- Generation Time: Nov 19, 2015 at 05:25 PM
+-- Server version: 5.5.44-0ubuntu0.14.04.1
+-- PHP Version: 5.5.9-1ubuntu4.11
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
 
 
@@ -8,7 +17,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8 */;
 
 --
--- Database: `greenhouse`
+-- Database: `greenhouse_dev`
 --
 
 -- --------------------------------------------------------
@@ -19,26 +28,13 @@ SET time_zone = "+00:00";
 
 CREATE TABLE IF NOT EXISTS `actuators` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `greenhouse_id` int(11) NOT NULL,
   `name` varchar(256) NOT NULL,
   `mode_id` int(11) NOT NULL,
   `status` varchar(256) NOT NULL,
   `revision` int(11) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=9 ;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `actuator_log`
---
-
-CREATE TABLE IF NOT EXISTS `actuator_log` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `actuator_id` int(11) NOT NULL,
-  `time` datetime NOT NULL,
-  `duty` int(11) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
 
 -- --------------------------------------------------------
 
@@ -60,6 +56,7 @@ CREATE TABLE IF NOT EXISTS `actuator_modes` (
 
 CREATE TABLE IF NOT EXISTS `graphs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `greenhouse_id` int(11) NOT NULL,
   `title` varchar(256) NOT NULL,
   `xaxis_title` varchar(256) NOT NULL,
   `yaxis_title` varchar(256) NOT NULL,
@@ -83,6 +80,18 @@ CREATE TABLE IF NOT EXISTS `graph_sensors` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `greenhouse`
+--
+
+CREATE TABLE IF NOT EXISTS `greenhouse` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(64) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=2 ;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `nodelinks`
 --
 
@@ -92,7 +101,7 @@ CREATE TABLE IF NOT EXISTS `nodelinks` (
   `node_in` int(11) NOT NULL,
   `node_out` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=60 ;
 
 -- --------------------------------------------------------
 
@@ -109,7 +118,7 @@ CREATE TABLE IF NOT EXISTS `nodes` (
   `xpos` int(11) NOT NULL,
   `ypos` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=21 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=69 ;
 
 -- --------------------------------------------------------
 
@@ -126,7 +135,7 @@ CREATE TABLE IF NOT EXISTS `nodetype` (
   `deletable` tinyint(1) NOT NULL DEFAULT '1',
   `has_value` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=8 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=9 ;
 
 -- --------------------------------------------------------
 
@@ -144,12 +153,38 @@ CREATE TABLE IF NOT EXISTS `permissions` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `rule_system`
+--
+
+CREATE TABLE IF NOT EXISTS `rule_system` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `greenhouse_id` int(11) NOT NULL,
+  `name` varchar(64) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `schedule`
 --
 
 CREATE TABLE IF NOT EXISTS `schedule` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `actuator_id` int(11) NOT NULL,
+  `greenhouse_id` int(11) NOT NULL,
+  `name` varchar(64) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=9 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `schedule_times`
+--
+
+CREATE TABLE IF NOT EXISTS `schedule_times` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `schedule_id` int(11) NOT NULL,
   `day` int(11) NOT NULL,
   `half_hour` int(11) NOT NULL,
   `duty` int(11) NOT NULL,
@@ -166,6 +201,7 @@ CREATE TABLE IF NOT EXISTS `schedule` (
 
 CREATE TABLE IF NOT EXISTS `sensors` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `greenhouse_id` int(11) NOT NULL,
   `name` varchar(256) NOT NULL,
   `pin` int(11) NOT NULL,
   `log` int(11) NOT NULL,
@@ -184,7 +220,7 @@ CREATE TABLE IF NOT EXISTS `sensor_data` (
   `value` float NOT NULL,
   `time` datetime NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=14673 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=59271 ;
 
 -- --------------------------------------------------------
 
@@ -197,6 +233,19 @@ CREATE TABLE IF NOT EXISTS `users` (
   `username` varchar(64) NOT NULL,
   `password` varchar(64) NOT NULL,
   `level` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=4 ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_greenhouse_link`
+--
+
+CREATE TABLE IF NOT EXISTS `user_greenhouse_link` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `greenhouse_id` int(11) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
 
