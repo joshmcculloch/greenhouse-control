@@ -97,7 +97,7 @@ class Dashboard extends CI_Controller {
                 $data['rule_system_id'] = $this->Actuator->get_rule_system_id($actuator_id);
                 $data['nodes'] = $this->Rules->getNodes($data['rule_system_id']);
                 $data['nodetypes'] = $this->Rules->getNodeTypes();
-                $data['links'] = $this->Rules->getLinks($actuator_id);
+                $data['links'] = $this->Rules->getLinks($data['rule_system_id']);
                 $this->load->view('panels/rule_panel', $data);
             }
             /*

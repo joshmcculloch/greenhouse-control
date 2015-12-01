@@ -172,7 +172,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         console.log("Updating node on db");
                         console.log(node.db_id, node.posx, node.posy, node.value);
                         $.ajax({
-                            url: '<?php echo base_url();?>index.php/dashboard/update_node',
+                            url: '<?php echo base_url();?>index.php/api/update_node',
                             method: "POST",
                             dataType: "json",
                             data: {
@@ -188,13 +188,13 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     function link_nodes_on_db (node_out, node_in) {
                         console.log("Linking nodes on db");
                         $.ajax({
-                            url: '<?php echo base_url();?>index.php/dashboard/link_nodes',
+                            url: '<?php echo base_url();?>index.php/api/link_nodes',
                             method: "POST",
                             dataType: "json",
                             data: {
                                 node_in: node_in.db_id,
                                 node_out: node_out.db_id,
-                                actuator: <?php echo $actuator_id; ?>,
+                                rule_system_id: <?php echo $rule_system_id; ?>,
                                 <?php echo $this->security->get_csrf_token_name().': \''.$this->security->get_csrf_hash().'\''; ?>
                             }
                         })
@@ -203,7 +203,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                     function unlink_nodes_on_db (node_out, node_in) {
                         console.log("Linking nodes on db");
                         $.ajax({
-                            url: '<?php echo base_url();?>index.php/dashboard/unlink_nodes',
+                            url: '<?php echo base_url();?>index.php/api/unlink_nodes',
                             method: "POST",
                             dataType: "json",
                             data: {
@@ -244,11 +244,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                         }
 
                         $.ajax({
-                            url: '<?php echo base_url();?>index.php/dashboard/create_node',
+                            url: '<?php echo base_url();?>index.php/api/create_node',
                             method: "POST",
                             dataType: "json",
                             data: {
-                                actuator_id: <?php echo $actuator_id; ?>,
+                                rule_system_id: <?php echo $rule_system_id; ?>,
                                 type_id: type_id,
                                 xpos: node.posx,
                                 ypos: node.posy,
@@ -280,7 +280,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
                             console.log("deleting node:", index);
                             rule_ns.nodes.splice(index, 1);
                             $.ajax({
-                                url: '<?php echo base_url();?>index.php/dashboard/delete_node',
+                                url: '<?php echo base_url();?>index.php/api/delete_node',
                                 method: "POST",
                                 dataType: "json",
                                 data: {

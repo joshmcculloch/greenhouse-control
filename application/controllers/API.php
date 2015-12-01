@@ -80,7 +80,7 @@ class API extends CI_Controller
             $this->load->library('form_validation');
             $this->load->model('Rules');
 
-            $this->form_validation->set_rules('actuator_id', 'actuator_id', 'required|numeric');
+            $this->form_validation->set_rules('rule_system_id', 'rule_system_id', 'required|numeric');
             $this->form_validation->set_rules('type_id', 'type_id', 'required|numeric');
             $this->form_validation->set_rules('xpos', 'xpos', 'required|numeric');
             $this->form_validation->set_rules('ypos', 'ypos', 'required|numeric');
@@ -90,14 +90,16 @@ class API extends CI_Controller
                 echo json_encode(array("error"=>"input validation failed"));
             } else {
                 $node_id = $this->Rules->createNode(
-                    $this->input->post('actuator_id'),
+                    $this->input->post('rule_system_id'),
                     $this->input->post('type_id'),
                     $this->input->post('xpos'),
                     $this->input->post('ypos'),
                     $this->input->post('value')
                 );
-                json_encode(array("node_id"=>$node_id, "success"=>true));
+                echo json_encode(array("node_id"=>$node_id, "success"=>true));
             }
+        } else {
+            echo json_encode(array("error"=>"not authorised"));
         }
     }
 
@@ -138,13 +140,13 @@ class API extends CI_Controller
 
             $this->form_validation->set_rules('node_in', 'node_in', 'required|numeric');
             $this->form_validation->set_rules('node_out', 'node_out', 'required|numeric');
-            $this->form_validation->set_rules('actuator', 'actuator', 'required|numeric');
+            $this->form_validation->set_rules('rule_system_id', 'actuator', 'required|numeric');
 
             if ($this->form_validation->run() == false) {
                 echo json_encode(array("error"=>"input validation failed"));
             } else {
                 $this->Rules->linkNodes(
-                    $this->input->post('actuator'),
+                    $this->input->post('rule_system_id'),
                     $this->input->post('node_in'),
                     $this->input->post('node_out')
                 );

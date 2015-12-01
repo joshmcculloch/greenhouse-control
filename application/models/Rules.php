@@ -9,9 +9,9 @@ class Rules extends CI_Model
         $this->load->database();
     }
 
-    function create_rule_system ($greenhouse_id, $name) {
-        $this->db->query('INSERT INTO rule_system (greenhouse_id, name) VALUES (?, ?)',
-            array($greenhouse_id, $name));
+    function create_rule_system ($greenhouse_id, $name, $global=0) {
+        $this->db->query('INSERT INTO rule_system (greenhouse_id, global, name) VALUES (?, ?, ?)',
+            array($greenhouse_id, $global, $name));
         return $this->db->insert_id();
     }
 
@@ -31,9 +31,14 @@ sensors.id as \'sensor_id\'
 FROM nodes
 LEFT JOIN (SELECT id, name, node_id FROM actuators) as actuators on actuators.node_id=nodes.id
 LEFT JOIN (SELECT id, name, node_id FROM sensors) as sensors on sensors.node_id=nodes.id
-WHERE rule_system_id=? OR rule_system_id=-1',
-            array($rule_system_id));
+WHERE rule_system_id=? OR rule_system_id=(SELECT id FROM rule_system WHERE global=1 AND greenhouse_id=(SELECT greenhouse_id FROM rule_system WHERE id=? LIMIT 1) LIMIT 1)',
+            array($rule_system_id,$rule_system_id));
         return $query->result_array();
+    }
+
+    function getGlobalRuleSystemID($greenhouse_id) {
+        $query = $this->db->query('SELECT id FROM rule_system WHERE greenhouse_id=? AND global=1', array($greenhouse_id));
+        return $query->row_array()['id'];
     }
 
     function getNode($node_id) {
