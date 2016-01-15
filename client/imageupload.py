@@ -7,7 +7,7 @@ from subprocess import call
 def capture_image(device="/dev/video0", img_no=1):
 	call(["fswebcam","-S", "30","-r","640x480", "--no-banner", "-d", device, "-F", "1", "camera.jpg"])
 
-	url = "http://green.joshmcculloch.nz/camera_upload.php?camera=%d"%img_no
+	url = "http://sprouter.info/camera_upload.php?camera=%d"%img_no
 	files = {"file": open("camera.jpg", "rb")}
 	return requests.post(url, files=files).text
 

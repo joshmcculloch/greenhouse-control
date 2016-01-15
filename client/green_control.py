@@ -358,14 +358,14 @@ if __name__ == "__main__":
 	try:
 		while True:
 			
-			#~ while (coms.inWaiting() > 0):
-				#~ try:
-					#~ sensor_data = coms.readline().decode('utf-8')
-					#~ for sensor in sensors:
-						#~ sensor.arduino_msg(sensor_data)
-				#~ except UnicodeDecodeError:
-					#~ #Throw away the line. The buffer was full and the message is garbage.
-					#~ continue
+			while (coms.inWaiting() > 0):
+				try:
+					sensor_data = coms.readline().decode('utf-8')
+					for sensor in sensors:
+						sensor.arduino_msg(sensor_data)
+				except UnicodeDecodeError:
+					#Throw away the line. The buffer was full and the message is garbage.
+					continue
 				
 			for sensor in sensors:
 				sensor.log()
